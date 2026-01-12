@@ -1,6 +1,8 @@
 import tkinter as tk
 import time
 
+__version__ = "1.0.0"
+
 class ChessClock:
     def __init__(self, root):
         self.root = root
@@ -102,6 +104,11 @@ class ChessClock:
         tk.Button(controls, text="RESET", font=('Arial', 13, 'bold'),
                  command=self.reset, width=12, height=2,
                  bg='#95a5a6', fg='white').pack(side=tk.LEFT, padx=8)
+        
+        # Version number at bottom right
+        version_label = tk.Label(self.root, text=f"v{__version__}", 
+                                font=('Arial', 9), bg='#2c3e50', fg='#7f8c8d')
+        version_label.pack(side=tk.BOTTOM, anchor=tk.SE, padx=10, pady=5)
     
     def button_click(self, player):
         # Start or switch to the clicked player's clock
