@@ -9,7 +9,7 @@ class ChessClock:
         self.root.configure(bg='#2c3e50')
         
         # Time variables (in seconds)
-        self.player1_time = 5  # Productivity - counts down
+        self.player1_time = 600  # Productivity - counts down
         self.player2_time = 0    # Slack - counts up
         self.active_player = None
         self.running = False
