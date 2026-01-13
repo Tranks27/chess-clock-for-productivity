@@ -1,5 +1,9 @@
 import tkinter as tk
 import time
+import winsound  # Windows built-in sound library
+import os
+import sys
+import threading
 
 __version__ = "1.0.0"
 
@@ -16,6 +20,10 @@ class ChessClock:
         self.active_player = None
         self.running = False
         self.last_update = None
+        
+        # Alarm control
+        self.alarm_playing = False
+        self.alarm_thread = None
         
         self.create_widgets()
         
@@ -234,6 +242,9 @@ class ChessClock:
             self._tick_running = False
     
     def reset(self):
+        # Stop alarm when resetting
+        self.stop_alarm()
+        
         self.running = False
         self.active_player = None
         self.player1_time = 600
@@ -242,11 +253,74 @@ class ChessClock:
         self.update_buttons()
         self.display_times()
     
+    def play_alarm_loop(self, alarm_path):
+        """Play alarm sound in a loop until stopped"""
+        # Get the duration of the sound file (approximate based on file size)
+        # For a more responsive stop, we'll use ASYNC and replay it
+        while self.alarm_playing:
+            try:
+                # Play sound asynchronously
+                winsound.PlaySound(alarm_path, winsound.SND_FILENAME | winsound.SND_ASYNC)
+                
+                # Wait for sound to finish, but check alarm_playing frequently
+                # Average alarm is 3-5 seconds, check every 0.1 seconds
+                for _ in range(50):  # Check for 5 seconds max
+                    if not self.alarm_playing:
+                        break
+                    time.sleep(0.1)
+                
+            except Exception as e:
+                print(f"Error playing alarm: {e}")
+                break
+    
+    def stop_alarm(self):
+        """Stop the looping alarm"""
+        self.alarm_playing = False
+        # Stop any currently playing sound
+        winsound.PlaySound(None, winsound.SND_PURGE)
+        if self.alarm_thread and self.alarm_thread.is_alive():
+            self.alarm_thread.join(timeout=1.0)
+    
     def end_game(self, winner):
         self.running = False
         self.p1_btn.config(text="GAME OVER", bg='#7f8c8d')
         self.p2_btn.config(text="GAME OVER", bg='#7f8c8d')
         
+        # Get alarm path
+        alarm_path = None
+        try:
+            # Get the correct directory (works for both script and .exe)
+            if getattr(sys, 'frozen', False):
+                script_dir = os.path.dirname(sys.executable)
+            else:
+                script_dir = os.path.dirname(os.path.abspath(__file__))
+            
+            alarm_path = os.path.join(script_dir, "assets", "media", "alarm.wav")
+            
+            print(f"Looking for alarm at: {alarm_path}")
+            print(f"File exists: {os.path.exists(alarm_path)}")
+            
+            if os.path.exists(alarm_path):
+                file_size = os.path.getsize(alarm_path)
+                print(f"File size: {file_size} bytes")
+                
+                if file_size > 0:
+                    # Start looping alarm in a separate thread
+                    self.alarm_playing = True
+                    self.alarm_thread = threading.Thread(target=self.play_alarm_loop, args=(alarm_path,), daemon=True)
+                    self.alarm_thread.start()
+                    print("Alarm started in loop")
+                else:
+                    print("WAV file is empty")
+                    winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+            else:
+                print("Alarm file not found")
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+        except Exception as e:
+            print(f"Sound error: {e}")
+            winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+        
+        # Show game over popup
         winner_name = self.p1_name.get() if winner == 2 else self.p2_name.get()
         
         win = tk.Toplevel(self.root)
@@ -254,10 +328,17 @@ class ChessClock:
         win.geometry("350x180")
         win.configure(bg='#2c3e50')
         
+        # Stop alarm when window is closed
+        def on_close():
+            self.stop_alarm()
+            win.destroy()
+        
+        win.protocol("WM_DELETE_WINDOW", on_close)
+        
         tk.Label(win, text=f"{winner_name} Wins!", 
                 font=('Arial', 24, 'bold'), 
                 bg='#2c3e50', fg='white').pack(pady=40)
-        tk.Button(win, text="Close", command=win.destroy, 
+        tk.Button(win, text="Close", command=on_close, 
                  font=('Arial', 14), width=10,
                  bg='#3498db', fg='white').pack()
 
