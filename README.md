@@ -30,6 +30,9 @@ Download the `.exe` file from the [Releases](https://github.com/yourusername/pro
 pip install pyinstaller
 pyinstaller --onefile --windowed --name ProductivityClock --add-data "assets;assets" main.py
 ```
+## Notes
+If your desired custom sound file doesn't work, use online wav converter tool to convert the sound file. https://www.freeconvert.com/wav-converter 
+
 
 ## Version
 Current version: 1.0.0
