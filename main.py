@@ -15,7 +15,7 @@ class ChessClock:
         self.root.configure(bg='#2c3e50')
         
         # Time variables (in seconds)
-        self.player1_time = 600  # Productivity - counts down
+        self.player1_time = 3  # Productivity - counts down
         self.player2_time = 0    # Slack - counts up
         self.active_player = None
         self.running = False
@@ -67,7 +67,7 @@ class ChessClock:
         self.p1_name.insert(0, "Productivity")
         self.p1_name.pack(pady=15)
         
-        self.p1_time = tk.Label(self.p1_frame, text="00:10:00", 
+        self.p1_time = tk.Label(self.p1_frame, text="00:00:03", 
                                font=('Arial', 56, 'bold'), bg='#ecf0f1')
         self.p1_time.pack(pady=40)
         
@@ -289,10 +289,13 @@ class ChessClock:
         # Get alarm path
         alarm_path = None
         try:
-            # Get the correct directory (works for both script and .exe)
+            # Get the correct directory for both script and .exe
             if getattr(sys, 'frozen', False):
-                script_dir = os.path.dirname(sys.executable)
+                # Running as compiled executable
+                # PyInstaller creates a temp folder and stores path in _MEIPASS
+                script_dir = sys._MEIPASS
             else:
+                # Running as script
                 script_dir = os.path.dirname(os.path.abspath(__file__))
             
             alarm_path = os.path.join(script_dir, "assets", "media", "alarm.wav")
