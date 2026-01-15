@@ -516,7 +516,7 @@ class ChessClock:
 
         win.protocol("WM_DELETE_WINDOW", on_close)
 
-        tk.Label(win, text=f"True Focus Achieved!",
+        tk.Label(win, text=f"Focus Achieved!",
                 font=('Arial', 24, 'bold'),
                 bg=self.get_t("main_bg"), fg=self.get_t("text_light")).pack(pady=40)
         tk.Button(win, text="Close", command=on_close,
