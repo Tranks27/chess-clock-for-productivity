@@ -28,11 +28,22 @@ Download the `.exe` file from the [Releases](https://github.com/yourusername/pro
 ## Building Executable
 ```bash
 pip install pyinstaller
-pyinstaller --onefile --windowed --name ProductivityClock --add-data "assets/media;assets/media" main.py
+pyinstaller --onefile --windowed --name TrueFocusTimer --add-data "assets/media;assets/media" --icon=assets/media/app_icon.ico main.py
 ```
 ## Notes
-If your desired custom sound file doesn't work, use online wav converter tool to convert the sound file. https://www.freeconvert.com/wav-converter 
+If your desired custom sound file doesn't work, use online wav converter tool to convert the sound file. https://www.freeconvert.com/wav-converter
 
+## License
+This project is licensed under the **GNU General Public License v3 (GPL v3)**.
+
+**Key Points:**
+- ✓ Free to use for personal and educational purposes
+- ✓ Free to modify and distribute
+- ✗ **NOT for commercial use** - cannot be sold or used in commercial products
+- ✓ Derivative works must also use GPL v3 license
+- ✓ Must remain open source
+
+See [LICENSE](LICENSE) file for full details.
 
 ## Version
 Current version: 1.0.0

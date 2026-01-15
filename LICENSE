@@ -1,0 +1,41 @@
+GNU GENERAL PUBLIC LICENSE
+Version 3, 29 June 2007
+
+Copyright (C) 2026 AYJ Systems
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
+IMPORTANT RESTRICTIONS:
+========================
+
+1. COMMERCIAL USE: This software may NOT be used for commercial purposes,
+   including but not limited to:
+   - Selling the software or services based on this software
+   - Using this software in a commercial product or service
+   - Charging users for access to this software
+
+2. DISTRIBUTION: If you distribute this software, you must:
+   - Include this license and copyright notice
+   - Provide source code access
+   - Use the same GPL v3 license for derivative works
+
+3. MODIFICATIONS: Any modifications or derivative works must:
+   - Retain this license
+   - Be made available under the same GPL v3 license
+   - Include clear notices of what was changed
+
+4. OPEN SOURCE: This software must remain open source. Any derivative
+   works must also be open source under GPL v3.
+
+For the full GPL v3 license text, visit: https://www.gnu.org/licenses/gpl-3.0.html
