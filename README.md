@@ -35,14 +35,20 @@ pyinstaller --onefile --windowed --name TrueFocusTimer --add-data "assets/media;
 If your desired custom sound file doesn't work, use online wav converter tool to convert the sound file. https://www.freeconvert.com/wav-converter
 
 ## License
-This project is licensed under the **GNU General Public License v3 (GPL v3)**.
 
-**Key Points:**
-- ✓ Free to use for personal and educational purposes
-- ✓ Free to modify and distribute
-- ✗ **NOT for commercial use** - cannot be sold or used in commercial products
-- ✓ Derivative works must also use GPL v3 license
-- ✓ Must remain open source
+This project is licensed under the **Creative Commons Attribution–NonCommercial 4.0
+International License (CC BY-NC 4.0)**.
+
+You are free to:
+- Use the software for personal and educational purposes
+- Modify and experiment with the source code
+- Share and redistribute the software
+
+Under the following terms:
+- **NonCommercial** — You may not use this project for commercial purposes,
+  including selling the software or incorporating it into commercial products
+  or services.
+- **Attribution** — You must give appropriate credit when redistributing. ✓ Must remain open source
 
 See [LICENSE](LICENSE) file for full details.
 
