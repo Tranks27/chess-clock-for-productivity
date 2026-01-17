@@ -7,6 +7,7 @@ from src.config import load_config, save_config
 from src.audio import AlarmPlayer, get_script_dir
 from src.ui import UIBuilder
 from src.timer import TimerState
+from src.stats import StatsTracker  # NEW IMPORT
 import os
 
 __version__ = "1.2.0"
@@ -28,6 +29,7 @@ class ChessClock:
         self.theme_manager = ThemeManager()
         self.timer_state = TimerState()
         self.alarm_player = AlarmPlayer()
+        self.stats_tracker = StatsTracker()  # NEW: Initialize stats tracker
 
         # Load theme preference
         theme = load_config(self.theme_manager.themes)
@@ -55,6 +57,10 @@ class ChessClock:
         """Handle player button click."""
         if self.timer_state.start_active_player(player):
             self.ui.update_button_states(self.timer_state.active_player)
+
+            # NEW: Start tracking session when first player clicks
+            if self.stats_tracker.current_session is None:
+                self.stats_tracker.start_session(self.timer_state.player1_time)
 
             if not self.timer_state._tick_running:
                 self.timer_state._tick_running = True
@@ -118,6 +124,10 @@ class ChessClock:
         """Reset timer to initial state."""
         self.alarm_player.stop_alarm()
 
+        # NEW: Track reset session before resetting
+        if self.stats_tracker.current_session is not None:
+            self.stats_tracker.reset_session(self.timer_state.player2_time)
+
         self.timer_state.reset()
         self.ui.update_button_states(None)
         self.ui.set_pause_button_state(False)
@@ -137,6 +147,11 @@ class ChessClock:
     def end_game(self):
         """Handle game end."""
         self.timer_state.running = False
+        
+        # NEW: Track completed session
+        if self.stats_tracker.current_session is not None:
+            self.stats_tracker.end_session(self.timer_state.player2_time, outcome="completed")
+        
         self.ui.p1_btn.config(
             text="GAME OVER",
             bg=self.theme_manager.get_color("text_muted")
