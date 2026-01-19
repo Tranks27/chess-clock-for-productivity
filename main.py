@@ -55,12 +55,20 @@ class ChessClock:
 
     def button_click(self, player):
         """Handle player button click."""
+        previous_player = self.timer_state.active_player
         if self.timer_state.start_active_player(player):
             self.ui.update_button_states(self.timer_state.active_player)
 
             # NEW: Start tracking session when first player clicks
             if self.stats_tracker.current_session is None:
                 self.stats_tracker.start_session(self.timer_state.player1_time)
+
+            if player == 2 and self.stats_tracker.current_session is not None:
+                self.stats_tracker.current_session["slack_events_count"] += 1
+                if previous_player != 2:
+                    self.stats_tracker.start_slack_segment()
+            elif player == 1 and previous_player == 2:
+                self.stats_tracker.end_slack_segment()
 
             if not self.timer_state._tick_running:
                 self.timer_state._tick_running = True
@@ -143,6 +151,10 @@ class ChessClock:
     def stop_alarm(self):
         """Stop the alarm."""
         self.alarm_player.stop_alarm()
+
+    def show_stats(self):
+        """Show stats visualization."""
+        self.ui.show_stats_window()
 
     def end_game(self):
         """Handle game end."""

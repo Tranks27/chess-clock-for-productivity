@@ -246,6 +246,18 @@ class UIBuilder:
         )
         self.reset_btn.pack(side=tk.LEFT, padx=8)
 
+        self.stats_btn = tk.Button(
+            self.controls,
+            text="STATS",
+            font=('Arial', 13, 'bold'),
+            command=self.clock_app.show_stats,
+            width=12,
+            height=2,
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
+        self.stats_btn.pack(side=tk.LEFT, padx=8)
+
     def create_footer(self):
         """Create footer with company and version info."""
         self.footer = tk.Frame(
@@ -360,6 +372,10 @@ class UIBuilder:
             bg=self.get_t("button_reset"),
             fg=self.get_t("text_light")
         )
+        self.stats_btn.config(
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
 
         # Footer
         self.footer.config(bg=self.get_t("main_bg"))
@@ -468,3 +484,269 @@ class UIBuilder:
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light")
         ).pack()
+
+    def show_stats_window(self):
+        """Show stats visualization window."""
+        win = tk.Toplevel(self.root)
+        win.title("Today's Stats")
+        win.geometry("900x620")
+        win.configure(bg=self.get_t("main_bg"))
+
+        sessions = self.clock_app.stats_tracker.get_sessions_with_metrics()
+        today_sessions = self._get_today_sessions(sessions)
+
+        header = tk.Frame(win, bg=self.get_t("main_bg"))
+        header.pack(fill=tk.X, padx=20, pady=(16, 8))
+
+        title = tk.Label(
+            header,
+            text="Today",
+            font=('Arial', 20, 'bold'),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_light")
+        )
+        title.pack(side=tk.LEFT)
+
+        tk.Button(
+            header,
+            text="Close",
+            command=win.destroy,
+            font=('Arial', 11),
+            width=8,
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        ).pack(side=tk.RIGHT)
+
+        headline_row = tk.Frame(win, bg=self.get_t("main_bg"))
+        headline_row.pack(fill=tk.X, padx=20, pady=(0, 10))
+        self._render_headline_metrics(headline_row, today_sessions)
+
+        insight_row = tk.Frame(win, bg=self.get_t("main_bg"))
+        insight_row.pack(fill=tk.X, padx=20, pady=(0, 10))
+        self._render_insights(insight_row, today_sessions)
+
+        table_container = tk.Frame(win, bg=self.get_t("main_bg"))
+        table_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 16))
+        self._render_session_table(table_container, today_sessions)
+
+    def _get_today_sessions(self, sessions):
+        """Filter sessions to today by local date."""
+        from datetime import datetime
+
+        today = datetime.now().date()
+        today_sessions = []
+        for session in sessions:
+            start = session.get("start_time")
+            if not start:
+                continue
+            try:
+                start_dt = datetime.fromisoformat(start)
+            except ValueError:
+                continue
+            if start_dt.date() == today:
+                today_sessions.append(session)
+        return today_sessions
+
+    def _render_headline_metrics(self, parent, sessions):
+        """Render the top-row headline metrics for today."""
+        planned = sum(s.get("initial_productivity_time", 0) for s in sessions)
+        actual = sum(s.get("actual_focus_time", 0) for s in sessions)
+        slack = sum(s.get("total_slack_time", 0) for s in sessions)
+        slack_ratio_total = (slack / (actual + slack)) if (actual + slack) else 0
+        efficiency = self._calculate_efficiency(slack_ratio_total)
+
+        cards = [
+            ("Planned Focus", self._format_seconds(planned)),
+            ("Actual Focus", self._format_seconds(actual)),
+            ("Slack (Interruptions)", self._format_seconds(slack)),
+            ("Focus Efficiency", f"{efficiency * 100:.0f}%")
+        ]
+
+        for label, value in cards:
+            card = tk.Frame(
+                parent,
+                bg=self.get_t("frame_bg"),
+                relief=tk.RAISED,
+                bd=2
+            )
+            card.pack(side=tk.LEFT, padx=6, ipadx=12, ipady=8)
+
+            tk.Label(
+                card,
+                text=label,
+                font=('Arial', 9),
+                bg=self.get_t("frame_bg"),
+                fg=self.get_t("text_muted")
+            ).pack()
+
+            tk.Label(
+                card,
+                text=value,
+                font=('Arial', 15, 'bold'),
+                bg=self.get_t("frame_bg"),
+                fg=self.get_t("text_light")
+            ).pack()
+
+    def _render_insights(self, parent, sessions):
+        """Render behavioral insights for today."""
+        total_slack = sum(s.get("total_slack_time", 0) for s in sessions)
+        avg_slack = (total_slack / len(sessions)) if sessions else 0
+
+        most_disrupted = None
+        max_ratio = -1
+        for session in sessions:
+            ratio = session.get("slack_ratio", 0)
+            if ratio > max_ratio:
+                max_ratio = ratio
+                most_disrupted = session
+
+        longest_interrupt = None
+        longest_duration = None
+        for session in sessions:
+            for seg in session.get("slack_segments", []):
+                duration = seg.get("duration_seconds")
+                if duration is None:
+                    continue
+                if longest_duration is None or duration > longest_duration:
+                    longest_duration = duration
+                    longest_interrupt = duration
+
+        items = [
+            ("Sessions", str(len(sessions))),
+            ("Avg Slack / Session", self._format_seconds(avg_slack)),
+            ("Most Disrupted", self._format_most_disrupted(most_disrupted, max_ratio)),
+        ]
+
+        if longest_interrupt is not None:
+            items.insert(0, ("Longest Interruption", self._format_seconds(longest_interrupt)))
+
+        for label, value in items:
+            card = tk.Frame(
+                parent,
+                bg=self.get_t("settings_bg"),
+                relief=tk.RAISED,
+                bd=1
+            )
+            card.pack(side=tk.LEFT, padx=6, ipadx=10, ipady=6)
+
+            tk.Label(
+                card,
+                text=label,
+                font=('Arial', 9),
+                bg=self.get_t("settings_bg"),
+                fg=self.get_t("text_muted")
+            ).pack()
+
+            tk.Label(
+                card,
+                text=value,
+                font=('Arial', 12, 'bold'),
+                bg=self.get_t("settings_bg"),
+                fg=self.get_t("text_light")
+            ).pack()
+
+    def _render_session_table(self, parent, sessions):
+        """Render today's session table."""
+        container = tk.Frame(parent, bg=self.get_t("frame_bg"), bd=2, relief=tk.RAISED)
+        container.pack(fill=tk.BOTH, expand=True)
+
+        header = tk.Frame(container, bg=self.get_t("frame_bg"))
+        header.pack(fill=tk.X, padx=12, pady=(10, 6))
+
+        tk.Label(
+            header,
+            text="Sessions Today",
+            font=('Arial', 12, 'bold'),
+            bg=self.get_t("frame_bg"),
+            fg=self.get_t("text_dark")
+        ).pack(side=tk.LEFT)
+
+        table = tk.Frame(container, bg=self.get_t("frame_bg"))
+        table.pack(fill=tk.BOTH, expand=True, padx=12, pady=(0, 12))
+
+        columns = ["Start", "Planned", "Slack", "Slack %", "Actual", "Efficiency", "Outcome"]
+        widths = [10, 12, 10, 9, 12, 11, 12]
+
+        for idx, col in enumerate(columns):
+            tk.Label(
+                table,
+                text=col,
+                font=('Arial', 9, 'bold'),
+                bg=self.get_t("frame_bg"),
+                fg=self.get_t("text_muted"),
+                width=widths[idx],
+                anchor=tk.W
+            ).grid(row=0, column=idx, sticky="w", pady=(0, 6))
+
+        if not sessions:
+            tk.Label(
+                table,
+                text="No sessions yet today.",
+                font=('Arial', 10),
+                bg=self.get_t("frame_bg"),
+                fg=self.get_t("text_dark")
+            ).grid(row=1, column=0, columnspan=len(columns), sticky="w")
+            return
+
+        from datetime import datetime
+        for row_idx, session in enumerate(sessions, start=1):
+            start_time = session.get("start_time")
+            try:
+                start_dt = datetime.fromisoformat(start_time) if start_time else None
+                start_label = start_dt.strftime("%H:%M") if start_dt else "--:--"
+            except ValueError:
+                start_label = "--:--"
+
+            planned = self._format_seconds(session.get("initial_productivity_time", 0))
+            slack = self._format_seconds(session.get("total_slack_time", 0))
+            actual = self._format_seconds(session.get("actual_focus_time", 0))
+            slack_ratio = session.get("slack_ratio", 0)
+            efficiency = self._calculate_efficiency(slack_ratio)
+            efficiency_label = f"{efficiency * 100:.0f}%"
+            slack_label = f"{slack_ratio * 100:.0f}%"
+            raw_outcome = session.get("outcome", "unknown")
+            outcome = raw_outcome.replace("_", " ").title()
+
+            values = [start_label, planned, slack, slack_label, actual, efficiency_label, outcome]
+
+            for col_idx, value in enumerate(values):
+                tk.Label(
+                    table,
+                    text=value,
+                    font=('Arial', 10),
+                    bg=self.get_t("frame_bg"),
+                    fg=self.get_t("warning_medium") if raw_outcome == "reset_early" else self.get_t("text_dark"),
+                    width=widths[col_idx],
+                    anchor=tk.W
+                ).grid(row=row_idx, column=col_idx, sticky="w")
+
+    def _format_signed_seconds(self, total_seconds):
+        """Format seconds with a sign for overrun values."""
+        sign = "-" if total_seconds < 0 else "+"
+        return f"{sign}{self._format_seconds(abs(total_seconds))}"
+
+    def _format_most_disrupted(self, session, ratio):
+        """Format the most disrupted session label."""
+        if not session:
+            return "--"
+        from datetime import datetime
+
+        start_time = session.get("start_time")
+        try:
+            start_dt = datetime.fromisoformat(start_time) if start_time else None
+            start_label = start_dt.strftime("%H:%M") if start_dt else "--:--"
+        except ValueError:
+            start_label = "--:--"
+        return f"{start_label} ({ratio * 100:.0f}%)"
+
+    def _calculate_efficiency(self, slack_ratio):
+        """Compute focus efficiency from slack ratio."""
+        return max(0, 1 - slack_ratio)
+
+    def _format_seconds(self, total_seconds):
+        """Format seconds to H:MM:SS."""
+        total_seconds = int(abs(total_seconds))
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        return f"{hours:d}:{minutes:02d}:{seconds:02d}"
