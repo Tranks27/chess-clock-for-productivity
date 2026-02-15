@@ -14,7 +14,7 @@ from src.stats import StatsTracker
 from src.idle_detector import IdleDetector
 import os
 
-__version__ = "1.2.0"
+__version__ = "1.3.0"
 __developer_name__ = "AYJ Systems"
 
 
