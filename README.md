@@ -60,7 +60,7 @@ This helps catch unproductive breaks and ensures accurate time tracking without 
 ## Installation
 
 ### Option 1: Download Executable (Windows)
-Download the `.exe` file from the [Releases](https://github.com/yourusername/productivity-timer/releases) page.
+Download the `.exe` file from the [Releases](https://github.com/Tranks27/chess-clock-for-productivity/releases) page.
 
 ### Option 2: Run from Source
 1. Install Python 3.7+
