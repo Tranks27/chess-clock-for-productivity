@@ -12,8 +12,9 @@ A desktop timer to track productivity vs. slack time.
 - Editable timer names (@todo)
 - Alarm sound when timer finishes
 - Color warnings for low time
-- Session statistics tracking
+- Session statistics tracking with monthly file organization
 - Interactive calendar view of work history
+- **Idle detection** - Automatically detects when you haven't moved the mouse for 5 minutes and prompts you to switch to Slack timer (auto-switches after 3 minutes if no response)
 
 ## Data Storage Locations
 
@@ -34,9 +35,27 @@ Stats are organized by month (YYYY-MM.json) to keep files manageable.
 - **Config:** Saved in user home directory: `C:\Users\{YourUsername}\.productivity_clock\config.json` (same as .exe)
 
 ### Accessing Your Data
-- To view raw session data, open the `stats.json` file in a text editor
+- To view raw session data, open the monthly files (e.g., `2025-01.json`) in a text editor
 - Theme preference and app settings are stored in `config.json`
 - Delete these files to reset the app to default settings
+
+## Idle Detection
+
+The app automatically detects when you haven't moved your mouse for **5 minutes** and prompts you to switch to the Slack timer:
+
+1. **Idle Alert** - A custom dialog box appears asking if you want to switch to Slack timer
+   - Click **Yes** to immediately switch to Slack timer
+   - Click **No** to dismiss and continue (but auto-switch timer still counts down)
+
+2. **Auto-Switch Confirmation** - If you don't respond within **3 minutes**:
+   - The prompt dialog automatically closes
+   - The Slack timer is automatically activated
+   - A confirmation popup notifies you: *"Auto-Switched to Slack"*
+   - The session now accurately tracks your interruption time
+
+3. **Activity Reset** - Moving your mouse while the timer is running cancels the idle detection and resets the counter
+
+This helps catch unproductive breaks and ensures accurate time tracking without requiring user interaction.
 
 ## Installation
 
