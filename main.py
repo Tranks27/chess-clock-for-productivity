@@ -108,13 +108,34 @@ class ChessClock:
         if self.timer_state.set_player1_time(seconds):
             self._display_times()
 
-    def set_custom(self):
-        """Set custom time from entry field."""
+    def adjust_hours(self, delta):
+        """Increment or decrement hours."""
         try:
-            minutes = float(self.ui.custom_entry.get())
-            seconds = int(minutes * 60)
-            if seconds > 0:
-                self.set_time(seconds)
+            current = int(self.ui.custom_hours_entry.get())
+            new_value = max(0, current + delta)
+            self.ui.custom_hours_entry.delete(0, tk.END)
+            self.ui.custom_hours_entry.insert(0, str(new_value))
+        except ValueError:
+            pass
+
+    def adjust_minutes(self, delta):
+        """Increment or decrement minutes."""
+        try:
+            current = int(self.ui.custom_mins_entry.get())
+            new_value = (current + delta) % 60
+            self.ui.custom_mins_entry.delete(0, tk.END)
+            self.ui.custom_mins_entry.insert(0, f"{new_value:02d}")
+        except ValueError:
+            pass
+
+    def set_custom(self):
+        """Set custom time from entry fields (hours and minutes)."""
+        try:
+            hours = float(self.ui.custom_hours_entry.get())
+            minutes = float(self.ui.custom_mins_entry.get())
+            total_seconds = int((hours * 3600) + (minutes * 60))
+            if total_seconds > 0:
+                self.set_time(total_seconds)
         except ValueError:
             pass
 

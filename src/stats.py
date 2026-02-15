@@ -26,27 +26,48 @@ def get_stats_dir():
     return stats_dir
 
 
-def get_stats_path():
-    """Get the stats file path."""
-    return os.path.join(get_stats_dir(), "stats.json")
+def get_stats_path_for_month(year, month):
+    """Get the stats file path for a specific month (YYYY-MM.json format)."""
+    filename = f"{year:04d}-{month:02d}.json"
+    return os.path.join(get_stats_dir(), filename)
 
 
 def load_stats():
-    """Load session statistics from file."""
+    """Load all session statistics from month files."""
+    stats_dir = get_stats_dir()
+    all_sessions = []
+
     try:
-        stats_path = get_stats_path()
-        if os.path.exists(stats_path):
-            with open(stats_path, 'r') as f:
-                return json.load(f)
+        # Look for all YYYY-MM.json files in the stats directory
+        if os.path.exists(stats_dir):
+            for filename in sorted(os.listdir(stats_dir)):
+                if filename.endswith('.json'):
+                    filepath = os.path.join(stats_dir, filename)
+                    try:
+                        with open(filepath, 'r') as f:
+                            data = json.load(f)
+                            if isinstance(data, dict) and "sessions" in data:
+                                all_sessions.extend(data["sessions"])
+                    except Exception as e:
+                        print(f"Error loading {filename}: {e}")
     except Exception as e:
         print(f"Error loading stats: {e}")
-    return {"sessions": []}
+
+    return {"sessions": all_sessions}
 
 
-def save_stats(stats):
-    """Save session statistics to file."""
+def save_stats(stats, year=None, month=None):
+    """Save session statistics to a month file.
+
+    If year/month not provided, uses current year/month.
+    """
     try:
-        stats_path = get_stats_path()
+        if year is None or month is None:
+            now = datetime.now()
+            year = now.year
+            month = now.month
+
+        stats_path = get_stats_path_for_month(year, month)
         with open(stats_path, 'w') as f:
             json.dump(stats, f, indent=2)
     except Exception as e:
@@ -98,7 +119,7 @@ class StatsTracker:
         """End the current session and save it."""
         if self.current_session is None:
             return
-        
+
         end_time = datetime.now()
         self.end_slack_segment(end_time=end_time)
         self.current_session["end_time"] = end_time.isoformat()
@@ -107,9 +128,28 @@ class StatsTracker:
         initial_time = self.current_session.get("initial_productivity_time", 0)
         self.current_session["work_time_actual"] = max(int(initial_time) - total_slack_time_int, 0)
         self.current_session["outcome"] = outcome
-        
+
+        # Extract year and month from session start time for file organization
+        start_dt = datetime.fromisoformat(self.current_session["start_time"])
+        year = start_dt.year
+        month = start_dt.month
+
+        # Load existing sessions for this month
+        month_stats_path = get_stats_path_for_month(year, month)
+        month_stats = {"sessions": []}
+        if os.path.exists(month_stats_path):
+            try:
+                with open(month_stats_path, 'r') as f:
+                    month_stats = json.load(f)
+            except Exception as e:
+                print(f"Error loading month stats: {e}")
+
+        # Add current session to month file
+        month_stats["sessions"].append(self.current_session)
+        save_stats(month_stats, year, month)
+
+        # Update in-memory stats for the session
         self.stats["sessions"].append(self.current_session)
-        save_stats(self.stats)
         self.current_session = None
     
     def reset_session(self, total_slack_time):

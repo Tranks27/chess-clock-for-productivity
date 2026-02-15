@@ -81,22 +81,104 @@ class UIBuilder:
         # Custom time label
         self.custom_label = tk.Label(
             self.settings,
-            text="Custom (min):",
+            text="Custom:",
             font=('Arial', 11),
             bg=self.get_t("settings_bg"),
             fg=self.get_t("text_light")
         )
         self.custom_label.pack(side=tk.LEFT, padx=(15, 5))
 
-        # Custom time entry
-        self.custom_entry = tk.Entry(
+        # Hours minus button
+        self.hours_minus_btn = tk.Button(
             self.settings,
-            width=8,
+            text="-",
+            width=2,
+            font=('Arial', 9),
+            command=lambda: self.clock_app.adjust_hours(-1),
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
+        self.hours_minus_btn.pack(side=tk.LEFT, padx=1)
+
+        # Custom hours entry
+        self.custom_hours_entry = tk.Entry(
+            self.settings,
+            width=3,
             font=('Arial', 11),
             bg=self.get_t("frame_bg"),
-            fg=self.get_t("text_dark")
+            fg=self.get_t("text_dark"),
+            justify='center'
         )
-        self.custom_entry.pack(side=tk.LEFT, padx=3)
+        self.custom_hours_entry.insert(0, "1")
+        self.custom_hours_entry.pack(side=tk.LEFT, padx=2)
+
+        # Hours plus button
+        self.hours_plus_btn = tk.Button(
+            self.settings,
+            text="+",
+            width=2,
+            font=('Arial', 9),
+            command=lambda: self.clock_app.adjust_hours(1),
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
+        self.hours_plus_btn.pack(side=tk.LEFT, padx=1)
+
+        # Hours label
+        self.hours_label = tk.Label(
+            self.settings,
+            text="h",
+            font=('Arial', 11),
+            bg=self.get_t("settings_bg"),
+            fg=self.get_t("text_light")
+        )
+        self.hours_label.pack(side=tk.LEFT, padx=5)
+
+        # Minutes minus button
+        self.mins_minus_btn = tk.Button(
+            self.settings,
+            text="-",
+            width=2,
+            font=('Arial', 9),
+            command=lambda: self.clock_app.adjust_minutes(-1),
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
+        self.mins_minus_btn.pack(side=tk.LEFT, padx=1)
+
+        # Custom minutes entry
+        self.custom_mins_entry = tk.Entry(
+            self.settings,
+            width=3,
+            font=('Arial', 11),
+            bg=self.get_t("frame_bg"),
+            fg=self.get_t("text_dark"),
+            justify='center'
+        )
+        self.custom_mins_entry.insert(0, "00")
+        self.custom_mins_entry.pack(side=tk.LEFT, padx=2)
+
+        # Minutes plus button
+        self.mins_plus_btn = tk.Button(
+            self.settings,
+            text="+",
+            width=2,
+            font=('Arial', 9),
+            command=lambda: self.clock_app.adjust_minutes(1),
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
+        self.mins_plus_btn.pack(side=tk.LEFT, padx=1)
+
+        # Minutes label
+        self.mins_label = tk.Label(
+            self.settings,
+            text="m",
+            font=('Arial', 11),
+            bg=self.get_t("settings_bg"),
+            fg=self.get_t("text_light")
+        )
+        self.mins_label.pack(side=tk.LEFT, padx=5)
 
         # Custom time button
         self.custom_btn = tk.Button(
@@ -313,9 +395,37 @@ class UIBuilder:
             bg=self.get_t("settings_bg"),
             fg=self.get_t("text_light")
         )
-        self.custom_entry.config(
+        self.hours_minus_btn.config(
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
+        self.custom_hours_entry.config(
             bg=self.get_t("frame_bg"),
             fg=self.get_t("text_dark")
+        )
+        self.hours_plus_btn.config(
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
+        self.hours_label.config(
+            bg=self.get_t("settings_bg"),
+            fg=self.get_t("text_light")
+        )
+        self.mins_minus_btn.config(
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
+        self.custom_mins_entry.config(
+            bg=self.get_t("frame_bg"),
+            fg=self.get_t("text_dark")
+        )
+        self.mins_plus_btn.config(
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        )
+        self.mins_label.config(
+            bg=self.get_t("settings_bg"),
+            fg=self.get_t("text_light")
         )
         self.custom_btn.config(
             bg=self.get_t("button_inactive"),
@@ -487,25 +597,105 @@ class UIBuilder:
 
     def show_stats_window(self):
         """Show stats visualization window."""
+        from datetime import datetime, timedelta
+        import calendar
+
         win = tk.Toplevel(self.root)
-        win.title("Today's Stats")
-        win.geometry("900x620")
+        win.title("Stats Dashboard")
+        win.geometry("1200x750")
         win.configure(bg=self.get_t("main_bg"))
 
         sessions = self.clock_app.stats_tracker.get_sessions_with_metrics()
-        today_sessions = self._get_today_sessions(sessions)
+        today = datetime.now().date()
+
+        # State: track selected date and current month
+        state = {
+            "selected_date": today,
+            "current_month": today.month,
+            "current_year": today.year,
+            "header_label": None,
+            "table_container": None,
+            "headline_row": None,
+            "insight_row": None,
+            "month_label": None,
+            "cal_grid_frame": None,
+            "cal_legend_frame": None
+        }
+
+        def update_display(selected_date):
+            """Update left side when a date is selected."""
+            state["selected_date"] = selected_date
+
+            # Update header
+            date_str = selected_date.strftime("%A, %B %d, %Y")
+            if state["header_label"]:
+                state["header_label"].config(text=date_str)
+
+            # Get sessions for selected date
+            selected_sessions = self._get_sessions_by_date(sessions, selected_date)
+
+            # Update headline metrics
+            if state["headline_row"]:
+                for widget in state["headline_row"].winfo_children():
+                    widget.destroy()
+                self._render_headline_metrics(state["headline_row"], selected_sessions)
+
+            # Update insights
+            if state["insight_row"]:
+                for widget in state["insight_row"].winfo_children():
+                    widget.destroy()
+                self._render_insights(state["insight_row"], selected_sessions)
+
+            # Update session table
+            if state["table_container"]:
+                for widget in state["table_container"].winfo_children():
+                    widget.destroy()
+                self._render_session_table(state["table_container"], selected_sessions)
+
+            # Redraw calendar grid to show selected date in orange
+            if state.get("cal_grid_frame") and state.get("cal_legend_frame"):
+                if selected_date.month == state["current_month"] and selected_date.year == state["current_year"]:
+                    for widget in state["cal_grid_frame"].winfo_children():
+                        widget.destroy()
+                    for widget in state["cal_legend_frame"].winfo_children():
+                        widget.destroy()
+                    self._render_calendar_grid(state["cal_grid_frame"], state["cal_legend_frame"], sessions, state, update_display)
+
+        def change_month(delta):
+            """Navigate to previous/next month."""
+            import calendar
+            state["current_month"] += delta
+            if state["current_month"] > 12:
+                state["current_month"] = 1
+                state["current_year"] += 1
+            elif state["current_month"] < 1:
+                state["current_month"] = 12
+                state["current_year"] -= 1
+
+            # Update month label
+            if state.get("month_label"):
+                state["month_label"].config(text=f"{calendar.month_name[state['current_month']]} {state['current_year']}")
+
+            # Redraw only the calendar grid and legend (not buttons)
+            if state.get("cal_grid_frame"):
+                for widget in state["cal_grid_frame"].winfo_children():
+                    widget.destroy()
+            if state.get("cal_legend_frame"):
+                for widget in state["cal_legend_frame"].winfo_children():
+                    widget.destroy()
+            self._render_calendar_grid(state["cal_grid_frame"], state["cal_legend_frame"], sessions, state, update_display)
 
         header = tk.Frame(win, bg=self.get_t("main_bg"))
         header.pack(fill=tk.X, padx=20, pady=(16, 8))
 
-        title = tk.Label(
+        state["header_label"] = tk.Label(
             header,
-            text="Today",
+            text=today.strftime("%A, %B %d, %Y"),
             font=('Arial', 20, 'bold'),
             bg=self.get_t("main_bg"),
             fg=self.get_t("text_light")
         )
-        title.pack(side=tk.LEFT)
+        state["header_label"].pack(side=tk.LEFT)
 
         tk.Button(
             header,
@@ -517,24 +707,100 @@ class UIBuilder:
             fg=self.get_t("text_light")
         ).pack(side=tk.RIGHT)
 
-        headline_row = tk.Frame(win, bg=self.get_t("main_bg"))
-        headline_row.pack(fill=tk.X, padx=20, pady=(0, 10))
-        self._render_headline_metrics(headline_row, today_sessions)
+        state["headline_row"] = tk.Frame(win, bg=self.get_t("main_bg"))
+        state["headline_row"].pack(fill=tk.X, padx=20, pady=(0, 10))
+        self._render_headline_metrics(state["headline_row"], self._get_today_sessions(sessions))
 
-        insight_row = tk.Frame(win, bg=self.get_t("main_bg"))
-        insight_row.pack(fill=tk.X, padx=20, pady=(0, 10))
-        self._render_insights(insight_row, today_sessions)
+        state["insight_row"] = tk.Frame(win, bg=self.get_t("main_bg"))
+        state["insight_row"].pack(fill=tk.X, padx=20, pady=(0, 10))
+        self._render_insights(state["insight_row"], self._get_today_sessions(sessions))
 
-        table_container = tk.Frame(win, bg=self.get_t("main_bg"))
-        table_container.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 16))
-        self._render_session_table(table_container, today_sessions)
+        # Main content with two columns
+        content_frame = tk.Frame(win, bg=self.get_t("main_bg"))
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=(0, 16))
+
+        # Left column: sessions for selected date
+        left_frame = tk.Frame(content_frame, bg=self.get_t("main_bg"))
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+
+        state["table_container"] = tk.Frame(left_frame, bg=self.get_t("main_bg"))
+        state["table_container"].pack(fill=tk.BOTH, expand=True)
+        self._render_session_table(state["table_container"], self._get_today_sessions(sessions))
+
+        # Right column: calendar
+        right_frame = tk.Frame(content_frame, bg=self.get_t("main_bg"))
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, padx=(10, 0))
+
+        # Calendar header with navigation buttons
+        cal_header_frame = tk.Frame(right_frame, bg=self.get_t("main_bg"))
+        cal_header_frame.pack(fill=tk.X, pady=(0, 10))
+
+        cal_header = tk.Label(
+            cal_header_frame,
+            text="Activity Calendar",
+            font=('Arial', 12, 'bold'),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_light")
+        )
+        cal_header.pack(pady=(0, 10))
+
+        # Navigation frame
+        nav_frame = tk.Frame(right_frame, bg=self.get_t("main_bg"))
+        nav_frame.pack(fill=tk.X, pady=(0, 10))
+
+        tk.Button(
+            nav_frame,
+            text="< Prev",
+            width=8,
+            font=('Arial', 9),
+            command=lambda: change_month(-1),
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        ).pack(side=tk.LEFT, padx=5)
+
+        state["month_label"] = tk.Label(
+            nav_frame,
+            text=f"{calendar.month_name[state['current_month']]} {state['current_year']}",
+            font=('Arial', 11, 'bold'),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_light")
+        )
+        state["month_label"].pack(side=tk.LEFT, expand=True)
+
+        tk.Button(
+            nav_frame,
+            text="Next >",
+            width=8,
+            font=('Arial', 9),
+            command=lambda: change_month(1),
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light")
+        ).pack(side=tk.RIGHT, padx=5)
+
+        # Calendar grid frame (will be cleared on month change)
+        state["cal_grid_frame"] = tk.Frame(right_frame, bg=self.get_t("main_bg"))
+        state["cal_grid_frame"].pack(fill=tk.BOTH, expand=True)
+
+        # Calendar legend frame (will be cleared on month change)
+        state["cal_legend_frame"] = tk.Frame(right_frame, bg=self.get_t("main_bg"))
+        state["cal_legend_frame"].pack(fill=tk.X, pady=(15, 0))
+
+        # Initial render
+        import calendar
+        self._render_calendar_grid(state["cal_grid_frame"], state["cal_legend_frame"], sessions, state, update_display)
 
     def _get_today_sessions(self, sessions):
         """Filter sessions to today by local date."""
         from datetime import datetime
 
         today = datetime.now().date()
-        today_sessions = []
+        return self._get_sessions_by_date(sessions, today)
+
+    def _get_sessions_by_date(self, sessions, target_date):
+        """Filter sessions to a specific date."""
+        from datetime import datetime
+
+        filtered_sessions = []
         for session in sessions:
             start = session.get("start_time")
             if not start:
@@ -543,9 +809,9 @@ class UIBuilder:
                 start_dt = datetime.fromisoformat(start)
             except ValueError:
                 continue
-            if start_dt.date() == today:
-                today_sessions.append(session)
-        return today_sessions
+            if start_dt.date() == target_date:
+                filtered_sessions.append(session)
+        return filtered_sessions
 
     def _render_headline_metrics(self, parent, sessions):
         """Render the top-row headline metrics for today."""
@@ -565,17 +831,17 @@ class UIBuilder:
         for label, value in cards:
             card = tk.Frame(
                 parent,
-                bg=self.get_t("frame_bg"),
+                bg=self.get_t("settings_bg"),
                 relief=tk.RAISED,
-                bd=2
+                bd=1
             )
-            card.pack(side=tk.LEFT, padx=6, ipadx=12, ipady=8)
+            card.pack(side=tk.LEFT, padx=6, ipadx=10, ipady=6)
 
             tk.Label(
                 card,
                 text=label,
                 font=('Arial', 9),
-                bg=self.get_t("frame_bg"),
+                bg=self.get_t("settings_bg"),
                 fg=self.get_t("text_muted")
             ).pack()
 
@@ -583,7 +849,7 @@ class UIBuilder:
                 card,
                 text=value,
                 font=('Arial', 15, 'bold'),
-                bg=self.get_t("frame_bg"),
+                bg=self.get_t("settings_bg"),
                 fg=self.get_t("text_light")
             ).pack()
 
@@ -750,3 +1016,296 @@ class UIBuilder:
         minutes = (total_seconds % 3600) // 60
         seconds = total_seconds % 60
         return f"{hours:d}:{minutes:02d}:{seconds:02d}"
+
+    def _render_calendar_grid(self, grid_frame, legend_frame, sessions, state, on_day_select=None):
+        """Render just the calendar grid and legend (for month changes)."""
+        import calendar
+        from datetime import datetime
+
+        # Build day -> session count mapping
+        day_sessions = {}
+        for session in sessions:
+            start_time = session.get("start_time")
+            if not start_time:
+                continue
+            try:
+                start_dt = datetime.fromisoformat(start_time)
+                day = start_dt.date()
+                day_sessions[day] = day_sessions.get(day, 0) + 1
+            except ValueError:
+                continue
+
+        # Weekday headers
+        for col, day_name in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']):
+            tk.Label(
+                grid_frame,
+                text=day_name,
+                font=('Arial', 9, 'bold'),
+                bg=self.get_t("settings_bg"),
+                fg=self.get_t("text_light"),
+                width=6,
+                height=2
+            ).grid(row=0, column=col, padx=2, pady=2, sticky='nsew')
+
+        # Calendar days
+        cal_obj = calendar.monthcalendar(state['current_year'], state['current_month'])
+        today = datetime.now().date()
+
+        for week_num, week in enumerate(cal_obj):
+            for day_num, day in enumerate(week):
+                if day == 0:
+                    # Empty cell for days outside the month
+                    tk.Label(
+                        grid_frame,
+                        text="",
+                        bg=self.get_t("main_bg")
+                    ).grid(row=week_num + 1, column=day_num, padx=2, pady=2)
+                else:
+                    day_date = datetime(state['current_year'], state['current_month'], day).date()
+                    sessions_count = day_sessions.get(day_date, 0)
+
+                    # Determine color based on activity
+                    if day_date == today:
+                        bg_color = self.get_t("button_active")
+                        text_color = self.get_t("text_light")
+                    elif day_date == state.get("selected_date"):
+                        bg_color = self.get_t("warning_medium")
+                        text_color = self.get_t("text_light")
+                    elif sessions_count > 0:
+                        bg_color = self.get_t("frame_bg")
+                        text_color = self.get_t("text_dark")
+                    else:
+                        bg_color = self.get_t("frame_bg")
+                        text_color = self.get_t("text_dark")
+
+                    # Create day cell as button
+                    day_text = f"{day}"
+                    if sessions_count > 0:
+                        day_text += f"\n({sessions_count})"
+
+                    def make_click_handler(d):
+                        def click_handler():
+                            if on_day_select:
+                                selected = datetime(state['current_year'], state['current_month'], d).date()
+                                on_day_select(selected)
+                        return click_handler
+
+                    tk.Button(
+                        grid_frame,
+                        text=day_text,
+                        font=('Arial', 8),
+                        bg=bg_color,
+                        fg=text_color,
+                        width=6,
+                        height=4,
+                        relief=tk.RAISED,
+                        bd=1,
+                        command=make_click_handler(day) if on_day_select else None
+                    ).grid(row=week_num + 1, column=day_num, padx=2, pady=2, sticky='nsew')
+
+        # Legend
+        tk.Label(
+            legend_frame,
+            text="●",
+            font=('Arial', 12),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("button_active")
+        ).pack(side=tk.LEFT, padx=5)
+
+        tk.Label(
+            legend_frame,
+            text="Today",
+            font=('Arial', 9),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_light")
+        ).pack(side=tk.LEFT, padx=(0, 10))
+
+        tk.Label(
+            legend_frame,
+            text="●",
+            font=('Arial', 12),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("warning_medium")
+        ).pack(side=tk.LEFT, padx=5)
+
+        tk.Label(
+            legend_frame,
+            text="Selected",
+            font=('Arial', 9),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_light")
+        ).pack(side=tk.LEFT)
+
+    def _render_calendar(self, parent, sessions, state=None, on_day_select=None, on_month_change=None):
+        """Render activity calendar showing days with sessions."""
+        import calendar
+        from datetime import datetime, timedelta
+
+        if state is None:
+            state = {"current_month": datetime.now().month, "current_year": datetime.now().year}
+
+        # Calendar header
+        cal_header = tk.Label(
+            parent,
+            text="Activity Calendar",
+            font=('Arial', 12, 'bold'),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_light")
+        )
+        cal_header.pack(pady=(0, 10))
+
+        # Build day -> session count mapping
+        day_sessions = {}
+        for session in sessions:
+            start_time = session.get("start_time")
+            if not start_time:
+                continue
+            try:
+                start_dt = datetime.fromisoformat(start_time)
+                day = start_dt.date()
+                day_sessions[day] = day_sessions.get(day, 0) + 1
+            except ValueError:
+                continue
+
+        # Create navigation frame
+        nav_frame = tk.Frame(parent, bg=self.get_t("main_bg"))
+        nav_frame.pack(fill=tk.X, pady=(0, 10))
+
+        if on_month_change:
+            tk.Button(
+                nav_frame,
+                text="< Prev",
+                width=8,
+                font=('Arial', 9),
+                command=lambda: on_month_change(-1),
+                bg=self.get_t("button_inactive"),
+                fg=self.get_t("text_light")
+            ).pack(side=tk.LEFT, padx=5)
+
+        month_label = tk.Label(
+            nav_frame,
+            text=f"{calendar.month_name[state['current_month']]} {state['current_year']}",
+            font=('Arial', 11, 'bold'),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_light")
+        )
+        month_label.pack(side=tk.LEFT, expand=True)
+
+        if on_month_change:
+            tk.Button(
+                nav_frame,
+                text="Next >",
+                width=8,
+                font=('Arial', 9),
+                command=lambda: on_month_change(1),
+                bg=self.get_t("button_inactive"),
+                fg=self.get_t("text_light")
+            ).pack(side=tk.RIGHT, padx=5)
+
+        # Create calendar grid
+        cal_frame = tk.Frame(parent, bg=self.get_t("main_bg"))
+        cal_frame.pack()
+
+        # Weekday headers
+        for col, day_name in enumerate(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']):
+            tk.Label(
+                cal_frame,
+                text=day_name,
+                font=('Arial', 9, 'bold'),
+                bg=self.get_t("settings_bg"),
+                fg=self.get_t("text_light"),
+                width=6,
+                height=2
+            ).grid(row=0, column=col, padx=2, pady=2, sticky='nsew')
+
+        # Calendar days
+        cal_obj = calendar.monthcalendar(state['current_year'], state['current_month'])
+        today = datetime.now().date()
+
+        for week_num, week in enumerate(cal_obj):
+            for day_num, day in enumerate(week):
+                if day == 0:
+                    # Empty cell for days outside the month
+                    tk.Label(
+                        cal_frame,
+                        text="",
+                        bg=self.get_t("main_bg")
+                    ).grid(row=week_num + 1, column=day_num, padx=2, pady=2)
+                else:
+                    day_date = datetime(state['current_year'], state['current_month'], day).date()
+                    sessions_count = day_sessions.get(day_date, 0)
+
+                    # Determine color based on activity
+                    if day_date == today:
+                        bg_color = self.get_t("button_active")
+                        text_color = self.get_t("text_light")
+                    elif day_date == state.get("selected_date"):
+                        bg_color = self.get_t("warning_medium")
+                        text_color = self.get_t("text_light")
+                    elif sessions_count > 0:
+                        bg_color = self.get_t("frame_bg")
+                        text_color = self.get_t("text_dark")
+                    else:
+                        bg_color = self.get_t("frame_bg")
+                        text_color = self.get_t("text_dark")
+
+                    # Create day cell as button
+                    day_text = f"{day}"
+                    if sessions_count > 0:
+                        day_text += f"\n({sessions_count})"
+
+                    def make_click_handler(d):
+                        def click_handler():
+                            if on_day_select:
+                                selected = datetime(state['current_year'], state['current_month'], d).date()
+                                on_day_select(selected)
+                        return click_handler
+
+                    tk.Button(
+                        cal_frame,
+                        text=day_text,
+                        font=('Arial', 8),
+                        bg=bg_color,
+                        fg=text_color,
+                        width=6,
+                        height=4,
+                        relief=tk.RAISED,
+                        bd=1,
+                        command=make_click_handler(day) if on_day_select else None
+                    ).grid(row=week_num + 1, column=day_num, padx=2, pady=2, sticky='nsew')
+
+        # Legend
+        legend_frame = tk.Frame(parent, bg=self.get_t("main_bg"))
+        legend_frame.pack(pady=(15, 0))
+
+        tk.Label(
+            legend_frame,
+            text="●",
+            font=('Arial', 12),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("button_active")
+        ).pack(side=tk.LEFT, padx=5)
+
+        tk.Label(
+            legend_frame,
+            text="Today",
+            font=('Arial', 9),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_light")
+        ).pack(side=tk.LEFT, padx=(0, 10))
+
+        tk.Label(
+            legend_frame,
+            text="●",
+            font=('Arial', 12),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("warning_medium")
+        ).pack(side=tk.LEFT, padx=5)
+
+        tk.Label(
+            legend_frame,
+            text="Selected",
+            font=('Arial', 9),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_light")
+        ).pack(side=tk.LEFT)

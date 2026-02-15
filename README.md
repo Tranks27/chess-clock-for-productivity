@@ -12,6 +12,31 @@ A desktop timer to track productivity vs. slack time.
 - Editable timer names (@todo)
 - Alarm sound when timer finishes
 - Color warnings for low time
+- Session statistics tracking
+- Interactive calendar view of work history
+
+## Data Storage Locations
+
+### When Running the Executable (.exe)
+All configuration and data files are stored in your user home directory for portability:
+```
+C:\Users\{YourUsername}\.productivity_clock\
+├── config.json          # Theme preference (light/dark)
+└── stats\
+    ├── 2025-01.json     # Session history for January 2025
+    ├── 2025-02.json     # Session history for February 2025
+    └── ...
+```
+Stats are organized by month (YYYY-MM.json) to keep files manageable.
+
+### When Running from Source (Python Script)
+- **Stats:** Saved in the project directory: `project_root/stats/` with monthly files (2025-01.json, 2025-02.json, etc.)
+- **Config:** Saved in user home directory: `C:\Users\{YourUsername}\.productivity_clock\config.json` (same as .exe)
+
+### Accessing Your Data
+- To view raw session data, open the `stats.json` file in a text editor
+- Theme preference and app settings are stored in `config.json`
+- Delete these files to reset the app to default settings
 
 ## Installation
 
