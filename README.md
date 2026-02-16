@@ -5,6 +5,9 @@
 
 A desktop timer to track productivity vs. slack time.
 
+# Very Quick Start
+1. Download Executable (Windows): Download the `.exe` file from the [Releases](https://github.com/Tranks27/chess-clock-for-productivity/releases) page and run. 
+
 ## Features
 - Productivity clock (counts down)
 - Slack clock (counts up)
