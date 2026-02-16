@@ -19,10 +19,11 @@ except ImportError:
 class MiniWindowManager:
     """Manage the circular mini timer window shown while app is minimized."""
 
-    def __init__(self, root, theme_manager, timer_state):
+    def __init__(self, root, theme_manager, timer_state, switch_player_callback=None):
         self.root = root
         self.theme_manager = theme_manager
         self.timer_state = timer_state
+        self.switch_player_callback = switch_player_callback
 
         self.mini_window = None
         self.mini_status_text_id = None
@@ -41,6 +42,10 @@ class MiniWindowManager:
         self.mini_drag_offset_x = 0
         self.mini_drag_offset_y = 0
         self.mini_custom_position = None
+        self.mini_focus_btn_bg_id = None
+        self.mini_focus_btn_text_id = None
+        self.mini_slack_btn_bg_id = None
+        self.mini_slack_btn_text_id = None
 
     def on_root_unmap(self, event):
         """Handle root minimize/hide."""
@@ -102,6 +107,10 @@ class MiniWindowManager:
             self.mini_circle_canvas.itemconfig(self.mini_slack_shadow_id, fill="#101010")
             self.mini_circle_canvas.itemconfig(self.mini_time_text_id, fill="#FFF4DB")
             self.mini_circle_canvas.itemconfig(self.mini_slack_text_id, fill="#FF6B7A")
+            if self.mini_focus_btn_text_id is not None:
+                self.mini_circle_canvas.itemconfig(self.mini_focus_btn_text_id, fill="#FFF4DB")
+            if self.mini_slack_btn_text_id is not None:
+                self.mini_circle_canvas.itemconfig(self.mini_slack_btn_text_id, fill="#FFF4DB")
 
     def update(self):
         """Refresh displayed status and times."""
@@ -131,6 +140,7 @@ class MiniWindowManager:
             self.mini_circle_canvas.itemconfig(self.mini_time_shadow_id, text=p1)
             self.mini_circle_canvas.itemconfig(self.mini_slack_text_id, text=p2)
             self.mini_circle_canvas.itemconfig(self.mini_slack_shadow_id, text=p2)
+            self._update_switch_button_styles()
 
     def _create_window(self):
         """Create mini timer window and its canvas elements."""
@@ -161,6 +171,10 @@ class MiniWindowManager:
         status_y = int(self.mini_shape_size * 0.22)
         main_y = int(self.mini_shape_size * 0.50)
         slack_y = int(self.mini_shape_size * 0.69)
+        buttons_y = int(self.mini_shape_size * 0.84)
+        button_width = int(self.mini_shape_size * 0.20)
+        button_height = int(self.mini_shape_size * 0.12)
+        button_gap = int(self.mini_shape_size * 0.04)
 
         self.mini_status_shadow_id = self.mini_circle_canvas.create_text(
             center_x + 1, status_y + 1, text="READY",
@@ -188,6 +202,33 @@ class MiniWindowManager:
             center_x, slack_y, text="00:00:00",
             font=("Consolas", 14, "bold"), fill="#FF6B7A", tags="mini_overlay"
         )
+
+        focus_left = center_x - button_gap // 2 - button_width
+        focus_right = center_x - button_gap // 2
+        slack_left = center_x + button_gap // 2
+        slack_right = center_x + button_gap // 2 + button_width
+        btn_top = buttons_y - button_height // 2
+        btn_bottom = buttons_y + button_height // 2
+
+        self.mini_focus_btn_bg_id = self.mini_circle_canvas.create_rectangle(
+            focus_left, btn_top, focus_right, btn_bottom,
+            outline="#0B1220", width=1, fill="#1D2A3A", tags=("mini_focus_btn", "mini_overlay")
+        )
+        self.mini_focus_btn_text_id = self.mini_circle_canvas.create_text(
+            (focus_left + focus_right) // 2, buttons_y, text="FOCUS",
+            font=("Segoe UI", 7, "bold"), fill="#FFF4DB", tags=("mini_focus_btn", "mini_overlay")
+        )
+        self.mini_slack_btn_bg_id = self.mini_circle_canvas.create_rectangle(
+            slack_left, btn_top, slack_right, btn_bottom,
+            outline="#0B1220", width=1, fill="#3A2323", tags=("mini_slack_btn", "mini_overlay")
+        )
+        self.mini_slack_btn_text_id = self.mini_circle_canvas.create_text(
+            (slack_left + slack_right) // 2, buttons_y, text="SLACK",
+            font=("Segoe UI", 7, "bold"), fill="#FFF4DB", tags=("mini_slack_btn", "mini_overlay")
+        )
+
+        self.mini_circle_canvas.tag_bind("mini_focus_btn", "<Button-1>", self._on_focus_button_click)
+        self.mini_circle_canvas.tag_bind("mini_slack_btn", "<Button-1>", self._on_slack_button_click)
 
         self._bind_drag(self.mini_window)
         self._bind_drag(self.mini_circle_canvas)
@@ -226,12 +267,16 @@ class MiniWindowManager:
         """Capture drag offset."""
         if self.mini_window is None or not self.mini_window.winfo_exists():
             return
+        if self._event_over_switch_button(event):
+            return
         self.mini_drag_offset_x = event.x_root - self.mini_window.winfo_x()
         self.mini_drag_offset_y = event.y_root - self.mini_window.winfo_y()
 
     def _on_drag_motion(self, event):
         """Move mini window during drag."""
         if self.mini_window is None or not self.mini_window.winfo_exists():
+            return
+        if self._event_over_switch_button(event):
             return
         left, top, right, bottom = self._get_virtual_desktop_bounds()
         width = self.mini_window.winfo_width()
@@ -242,6 +287,50 @@ class MiniWindowManager:
         y = max(top, min(y, bottom - height))
         self.mini_custom_position = (x, y)
         self.mini_window.geometry(f"+{x}+{y}")
+
+    def _on_focus_button_click(self, _event):
+        """Switch to focus clock from mini window."""
+        if callable(self.switch_player_callback):
+            self.switch_player_callback(1)
+            self.update()
+        return "break"
+
+    def _on_slack_button_click(self, _event):
+        """Switch to slack clock from mini window."""
+        if callable(self.switch_player_callback):
+            self.switch_player_callback(2)
+            self.update()
+        return "break"
+
+    def _event_over_switch_button(self, event):
+        """Return True when pointer is over a switch button item."""
+        if self.mini_circle_canvas is None:
+            return False
+        hit_items = self.mini_circle_canvas.find_overlapping(event.x, event.y, event.x, event.y)
+        for item_id in hit_items:
+            tags = self.mini_circle_canvas.gettags(item_id)
+            if "mini_focus_btn" in tags or "mini_slack_btn" in tags:
+                return True
+        return False
+
+    def _update_switch_button_styles(self):
+        """Highlight mini switch button for active clock."""
+        if (
+            self.mini_focus_btn_bg_id is None
+            or self.mini_slack_btn_bg_id is None
+            or self.mini_circle_canvas is None
+        ):
+            return
+
+        focus_fill = "#1D2A3A"
+        slack_fill = "#3A2323"
+        if self.timer_state.active_player == 1 and self.timer_state.running:
+            focus_fill = "#227A99"
+        elif self.timer_state.active_player == 2 and self.timer_state.running:
+            slack_fill = "#A14F2A"
+
+        self.mini_circle_canvas.itemconfig(self.mini_focus_btn_bg_id, fill=focus_fill)
+        self.mini_circle_canvas.itemconfig(self.mini_slack_btn_bg_id, fill=slack_fill)
 
     def _get_virtual_desktop_bounds(self):
         """Get virtual desktop bounds across monitors."""

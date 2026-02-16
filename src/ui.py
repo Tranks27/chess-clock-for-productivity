@@ -1,6 +1,21 @@
 """UI/widget creation for TrueFocus Timer."""
 
+import io
+import os
 import tkinter as tk
+
+from src.audio import get_script_dir
+
+try:
+    import cairosvg
+except ImportError:
+    cairosvg = None
+
+try:
+    from PIL import Image, ImageTk
+except ImportError:
+    Image = None
+    ImageTk = None
 
 
 class UIBuilder:
@@ -12,10 +27,48 @@ class UIBuilder:
         self.developer_name = developer_name
         self.theme_manager = theme_manager
         self.clock_app = clock_app
+        self.stats_btn_icon = None
+        self.theme_light_icon = None
+        self.theme_dark_icon = None
 
     def get_t(self, key):
         """Get a color value from the current theme."""
         return self.theme_manager.get_color(key)
+
+    def _load_svg_icon(self, filename, size=18):
+        """Load an SVG icon from assets/media as a Tk image."""
+        media_dir = os.path.join(get_script_dir(), "assets", "media")
+        icon_path = os.path.join(media_dir, filename)
+        if not os.path.exists(icon_path):
+            return None
+
+        if cairosvg is None or Image is None or ImageTk is None:
+            print(f"SVG icon requires cairosvg + Pillow: {filename}")
+            return None
+
+        try:
+            png_bytes = cairosvg.svg2png(
+                url=icon_path,
+                output_width=size,
+                output_height=size,
+            )
+            image = Image.open(io.BytesIO(png_bytes))
+            return ImageTk.PhotoImage(image)
+        except Exception as err:
+            print(f"SVG icon render error ({filename}): {err}")
+            return None
+
+        return None
+
+    def _load_stats_icon(self, size=18):
+        """Load stats icon image."""
+        return self._load_svg_icon("stats_icon.svg", size=size)
+
+    def _get_theme_button_icon(self):
+        """Return the icon matching the current theme."""
+        if self.theme_manager.current_theme == "dark":
+            return self.theme_light_icon
+        return self.theme_dark_icon
 
     def create_all_widgets(self):
         """Create all UI widgets."""
@@ -32,7 +85,7 @@ class UIBuilder:
             text="TrueFocus Timer",
             font=('Arial', 24, 'bold'),
             bg=self.get_t("main_bg"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("title_text")
         )
         self.title_widget.pack(pady=15)
 
@@ -192,17 +245,68 @@ class UIBuilder:
         self.custom_btn.pack(side=tk.LEFT, padx=3)
 
         # Theme toggle button (right side)
+        self.theme_light_icon = self._load_svg_icon("light.svg", size=30)
+        self.theme_dark_icon = self._load_svg_icon("dark.svg", size=30)
+        theme_icon = self._get_theme_button_icon()
         self.theme_toggle_btn = tk.Button(
             self.settings,
-            text=self.theme_manager.get_theme_icon(),
+            text="" if theme_icon is not None else self.theme_manager.get_theme_icon(),
+            image=theme_icon,
+            compound=tk.CENTER,
             font=('Arial', 11),
-            width=4,
-            height=1,
             command=self.clock_app.toggle_theme,
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=2,
+            highlightthickness=1,
+            padx=2,
+            pady=0
         )
         self.theme_toggle_btn.pack(side=tk.RIGHT, padx=10)
+
+        # Stats button (top-right, next to theme toggle)
+        self.stats_btn_icon = self._load_stats_icon(size=30)
+        self.stats_btn = tk.Button(
+            self.settings,
+            text="📊",
+            font=('Arial', 15, 'bold'),
+            command=self.clock_app.show_stats,
+            bg=self.get_t("button_inactive"),
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=2,
+            highlightthickness=1,
+            padx=2,
+            pady=0
+        )
+        self.stats_btn.config(text="STATS")
+        self.stats_btn.pack(side=tk.RIGHT, padx=4)
+        if self.stats_btn_icon is not None:
+            self.stats_btn.config(
+                text="",
+                image=self.stats_btn_icon,
+                compound=tk.CENTER
+            )
+        else:
+            self.stats_btn.config(text="STATS")
+
+        # Widgets that control initial timer duration.
+        self.time_selection_widgets = [
+            self.time_btn_1hr,
+            self.time_btn_2hr,
+            self.hours_minus_btn,
+            self.custom_hours_entry,
+            self.hours_plus_btn,
+            self.mins_minus_btn,
+            self.custom_mins_entry,
+            self.mins_plus_btn,
+            self.custom_btn,
+        ]
 
     def create_clocks(self):
         """Create player clock frames."""
@@ -328,18 +432,6 @@ class UIBuilder:
         )
         self.reset_btn.pack(side=tk.LEFT, padx=8)
 
-        self.stats_btn = tk.Button(
-            self.controls,
-            text="STATS",
-            font=('Arial', 13, 'bold'),
-            command=self.clock_app.show_stats,
-            width=12,
-            height=2,
-            bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
-        )
-        self.stats_btn.pack(side=tk.LEFT, padx=8)
-
     def create_footer(self):
         """Create footer with company and version info."""
         self.footer = tk.Frame(
@@ -374,7 +466,7 @@ class UIBuilder:
         # Title
         self.title_widget.config(
             bg=self.get_t("main_bg"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("title_text")
         )
 
         # Settings frame
@@ -432,10 +524,18 @@ class UIBuilder:
             fg=self.get_t("text_light")
         )
         self.theme_toggle_btn.config(
-            text=self.theme_manager.get_theme_icon(),
+            text="",
+            image=self._get_theme_button_icon(),
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=2,
+            highlightthickness=1
         )
+        if self._get_theme_button_icon() is None:
+            self.theme_toggle_btn.config(text=self.theme_manager.get_theme_icon())
 
         # Clocks frame
         self.clocks.config(bg=self.get_t("main_bg"))
@@ -484,7 +584,12 @@ class UIBuilder:
         )
         self.stats_btn.config(
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=2,
+            highlightthickness=1
         )
 
         # Footer
@@ -502,6 +607,12 @@ class UIBuilder:
         """Update displayed times for both players."""
         self.p1_time.config(text=time1_str)
         self.p2_time.config(text=time2_str)
+
+    def set_time_selection_enabled(self, enabled):
+        """Enable/disable time selection controls."""
+        state = tk.NORMAL if enabled else tk.DISABLED
+        for widget in getattr(self, "time_selection_widgets", []):
+            widget.config(state=state)
 
     def update_button_states(self, active_player):
         """Update button states based on active player."""
@@ -618,8 +729,7 @@ class UIBuilder:
             "headline_row": None,
             "insight_row": None,
             "month_label": None,
-            "cal_grid_frame": None,
-            "cal_legend_frame": None
+            "cal_grid_frame": None
         }
 
         def update_display(selected_date):
@@ -653,13 +763,11 @@ class UIBuilder:
                 self._render_session_table(state["table_container"], selected_sessions)
 
             # Redraw calendar grid to show selected date in orange
-            if state.get("cal_grid_frame") and state.get("cal_legend_frame"):
+            if state.get("cal_grid_frame"):
                 if selected_date.month == state["current_month"] and selected_date.year == state["current_year"]:
                     for widget in state["cal_grid_frame"].winfo_children():
                         widget.destroy()
-                    for widget in state["cal_legend_frame"].winfo_children():
-                        widget.destroy()
-                    self._render_calendar_grid(state["cal_grid_frame"], state["cal_legend_frame"], sessions, state, update_display)
+                    self._render_calendar_grid(state["cal_grid_frame"], sessions, state, update_display)
 
         def change_month(delta):
             """Navigate to previous/next month."""
@@ -676,14 +784,11 @@ class UIBuilder:
             if state.get("month_label"):
                 state["month_label"].config(text=f"{calendar.month_name[state['current_month']]} {state['current_year']}")
 
-            # Redraw only the calendar grid and legend (not buttons)
+            # Redraw only the calendar grid (not buttons)
             if state.get("cal_grid_frame"):
                 for widget in state["cal_grid_frame"].winfo_children():
                     widget.destroy()
-            if state.get("cal_legend_frame"):
-                for widget in state["cal_legend_frame"].winfo_children():
-                    widget.destroy()
-            self._render_calendar_grid(state["cal_grid_frame"], state["cal_legend_frame"], sessions, state, update_display)
+            self._render_calendar_grid(state["cal_grid_frame"], sessions, state, update_display)
 
         header = tk.Frame(win, bg=self.get_t("main_bg"))
         header.pack(fill=tk.X, padx=20, pady=(16, 8))
@@ -781,13 +886,9 @@ class UIBuilder:
         state["cal_grid_frame"] = tk.Frame(right_frame, bg=self.get_t("main_bg"))
         state["cal_grid_frame"].pack(fill=tk.BOTH, expand=True)
 
-        # Calendar legend frame (will be cleared on month change)
-        state["cal_legend_frame"] = tk.Frame(right_frame, bg=self.get_t("main_bg"))
-        state["cal_legend_frame"].pack(fill=tk.X, pady=(15, 0))
-
         # Initial render
         import calendar
-        self._render_calendar_grid(state["cal_grid_frame"], state["cal_legend_frame"], sessions, state, update_display)
+        self._render_calendar_grid(state["cal_grid_frame"], sessions, state, update_display)
 
     def _get_today_sessions(self, sessions):
         """Filter sessions to today by local date."""
@@ -1017,8 +1118,8 @@ class UIBuilder:
         seconds = total_seconds % 60
         return f"{hours:d}:{minutes:02d}:{seconds:02d}"
 
-    def _render_calendar_grid(self, grid_frame, legend_frame, sessions, state, on_day_select=None):
-        """Render just the calendar grid and legend (for month changes)."""
+    def _render_calendar_grid(self, grid_frame, sessions, state, on_day_select=None):
+        """Render just the calendar grid (for month changes)."""
         import calendar
         from datetime import datetime
 
@@ -1103,7 +1204,8 @@ class UIBuilder:
                         command=make_click_handler(day) if on_day_select else None
                     ).grid(row=week_num + 1, column=day_num, padx=2, pady=2, sticky='nsew')
 
-        # Legend
+        # Legend removed.
+        return
         tk.Label(
             legend_frame,
             text="●",
@@ -1274,7 +1376,8 @@ class UIBuilder:
                         command=make_click_handler(day) if on_day_select else None
                     ).grid(row=week_num + 1, column=day_num, padx=2, pady=2, sticky='nsew')
 
-        # Legend
+        # Legend removed.
+        return
         legend_frame = tk.Frame(parent, bg=self.get_t("main_bg"))
         legend_frame.pack(pady=(15, 0))
 

@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import messagebox
 import threading
 import time
+import ctypes
 
 from src.themes import ThemeManager
 from src.config import load_config, save_config
@@ -42,6 +43,7 @@ class ChessClock:
         self.theme_manager.current_theme = theme
 
         self.root.configure(bg=self.theme_manager.get_color("main_bg"))
+        self._apply_window_chrome_theme()
 
         # Create UI
         self.ui = UIBuilder(self.root, __version__, __developer_name__,
@@ -64,12 +66,15 @@ class ChessClock:
         self.mini_window_manager = MiniWindowManager(
             root=self.root,
             theme_manager=self.theme_manager,
-            timer_state=self.timer_state
+            timer_state=self.timer_state,
+            switch_player_callback=self._switch_clock_from_mini
         )
 
         # Show a sticky mini timer while the main window is minimized.
         self.root.bind("<Unmap>", self.mini_window_manager.on_root_unmap)
         self.root.bind("<Map>", self.mini_window_manager.on_root_map)
+        self.root.bind("<Map>", lambda _e: self.root.after(10, self._apply_window_chrome_theme), add="+")
+        self.root.after(10, self._apply_window_chrome_theme)
 
     def _set_window_icon(self, window=None):
         """Set window icon from assets."""
@@ -95,6 +100,7 @@ class ChessClock:
         """Handle player button click."""
         previous_player = self.timer_state.active_player
         if self.timer_state.start_active_player(player):
+            self.ui.set_time_selection_enabled(False)
             self.ui.update_button_states(self.timer_state.active_player)
 
             # NEW: Start tracking session when first player clicks
@@ -111,6 +117,10 @@ class ChessClock:
             if not self.timer_state._tick_running:
                 self.timer_state._tick_running = True
                 self.tick()
+
+    def _switch_clock_from_mini(self, player):
+        """Switch active clock from the mini window buttons."""
+        self.button_click(player)
 
     def tick(self):
         """Update timer and display."""
@@ -197,6 +207,7 @@ class ChessClock:
             self.stats_tracker.reset_session(self.timer_state.player2_time)
 
         self.timer_state.reset()
+        self.ui.set_time_selection_enabled(True)
         self.ui.update_button_states(None)
         self.ui.set_pause_button_state(False)
         self._display_times()
@@ -205,9 +216,107 @@ class ChessClock:
         """Toggle between light and dark theme."""
         self.theme_manager.toggle_theme()
         save_config(self.theme_manager.current_theme)
+        self._apply_window_chrome_theme()
         self.ui.apply_theme()
         self.mini_window_manager.apply_theme()
         self._display_times()
+
+    def _apply_window_chrome_theme(self):
+        """Apply dark/light mode and caption colors to native Windows title bar."""
+        try:
+            self.root.update_idletasks()
+            hwnd = self.root.winfo_id()
+            # Tk can return a child handle on some systems; use the top-level parent when available.
+            top_hwnd = ctypes.windll.user32.GetParent(hwnd)
+            if top_hwnd:
+                hwnd = top_hwnd
+
+            is_dark = 1 if self.theme_manager.current_theme == "dark" else 0
+            value = ctypes.c_int(is_dark)
+            # Windows 10/11 immersive dark caption attribute ids.
+            for attr in (20, 19):  # DWMWA_USE_IMMERSIVE_DARK_MODE
+                try:
+                    ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                        ctypes.c_void_p(hwnd),
+                        ctypes.c_uint(attr),
+                        ctypes.byref(value),
+                        ctypes.sizeof(value)
+                    )
+                except Exception:
+                    continue
+
+            # Force caption/text colors so the title bar is not bright white.
+            def _hex_to_colorref(hex_color):
+                hex_color = hex_color.lstrip("#")
+                if len(hex_color) != 6:
+                    return None
+                r = int(hex_color[0:2], 16)
+                g = int(hex_color[2:4], 16)
+                b = int(hex_color[4:6], 16)
+                return (b << 16) | (g << 8) | r
+
+            def _mix_hex(hex_a, hex_b, ratio=0.5):
+                """Mix two #RRGGBB colors; ratio favors second color."""
+                a = hex_a.lstrip("#")
+                b = hex_b.lstrip("#")
+                if len(a) != 6 or len(b) != 6:
+                    return hex_a
+                ratio = max(0.0, min(1.0, ratio))
+                ar, ag, ab = int(a[0:2], 16), int(a[2:4], 16), int(a[4:6], 16)
+                br, bg, bb = int(b[0:2], 16), int(b[2:4], 16), int(b[4:6], 16)
+                rr = int(ar * (1.0 - ratio) + br * ratio)
+                rg = int(ag * (1.0 - ratio) + bg * ratio)
+                rb = int(ab * (1.0 - ratio) + bb * ratio)
+                return f"#{rr:02x}{rg:02x}{rb:02x}"
+
+            base_bg = self.theme_manager.get_color("main_bg")
+            accent_bg = self.theme_manager.get_color("settings_bg")
+            # Slight contrast from app body, still within theme palette.
+            caption_hex = _mix_hex(base_bg, accent_bg, 0.35)
+            border_hex = _mix_hex(base_bg, accent_bg, 0.55)
+
+            caption = _hex_to_colorref(caption_hex)
+            border = _hex_to_colorref(border_hex)
+            text = _hex_to_colorref(self.theme_manager.get_color("text_dark" if is_dark else "text_light"))
+
+            if caption is not None:
+                cap_val = ctypes.c_uint(caption)
+                try:
+                    ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                        ctypes.c_void_p(hwnd),
+                        ctypes.c_uint(35),  # DWMWA_CAPTION_COLOR
+                        ctypes.byref(cap_val),
+                        ctypes.sizeof(cap_val)
+                    )
+                except Exception:
+                    pass
+
+            if border is not None:
+                border_val = ctypes.c_uint(border)
+                for attr in (34,):  # DWMWA_BORDER_COLOR
+                    try:
+                        ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                            ctypes.c_void_p(hwnd),
+                            ctypes.c_uint(attr),
+                            ctypes.byref(border_val),
+                            ctypes.sizeof(border_val)
+                        )
+                    except Exception:
+                        continue
+
+            if text is not None:
+                text_val = ctypes.c_uint(text)
+                try:
+                    ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                        ctypes.c_void_p(hwnd),
+                        ctypes.c_uint(36),  # DWMWA_TEXT_COLOR
+                        ctypes.byref(text_val),
+                        ctypes.sizeof(text_val)
+                    )
+                except Exception:
+                    pass
+        except Exception:
+            pass
 
     def stop_alarm(self):
         """Stop the alarm."""

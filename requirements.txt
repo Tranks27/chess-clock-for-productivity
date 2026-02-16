@@ -1,3 +1,4 @@
 pyinstaller>=6.17.0
 pynput>=1.8.1
 Pillow>=10.0.0
+cairosvg>=2.7.1

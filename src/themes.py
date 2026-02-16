@@ -13,7 +13,8 @@ THEMES = {
         "warning_critical": "#e74c3c",
         "text_light": "white",
         "text_dark": "black",
-        "text_muted": "#7f8c8d"
+        "text_muted": "#7f8c8d",
+        "title_text": "#5f6b78"
     },
     "dark": {
         "main_bg": "#1a1a1a",
@@ -27,7 +28,8 @@ THEMES = {
         "warning_critical": "#d32f2f",
         "text_light": "white",
         "text_dark": "#e0e0e0",
-        "text_muted": "#9e9e9e"
+        "text_muted": "#9e9e9e",
+        "title_text": "#7a7a7a"
     }
 }
 
