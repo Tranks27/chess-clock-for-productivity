@@ -30,6 +30,7 @@ class UIBuilder:
         self.stats_btn_icon = None
         self.theme_light_icon = None
         self.theme_dark_icon = None
+        self.font_family = "Bahnschrift"
 
     def get_t(self, key):
         """Get a color value from the current theme."""
@@ -80,24 +81,39 @@ class UIBuilder:
 
     def create_title(self):
         """Create title widget."""
-        self.title_widget = tk.Label(
+        self.title_row = tk.Frame(
             self.root,
+            bg=self.get_t("main_bg")
+        )
+        self.title_row.pack(fill=tk.X, padx=24, pady=(12, 6))
+
+        self.title_widget = tk.Label(
+            self.title_row,
             text="TrueFocus Timer",
-            font=('Arial', 24, 'bold'),
+            font=(self.font_family, 30, 'bold'),
             bg=self.get_t("main_bg"),
             fg=self.get_t("title_text")
         )
-        self.title_widget.pack(pady=15)
+        self.title_widget.pack(side=tk.LEFT)
+
+        self.title_subtitle = tk.Label(
+            self.title_row,
+            text="WORK x SLACK",
+            font=(self.font_family, 10, "bold"),
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("button_inactive")
+        )
+        self.title_subtitle.pack(side=tk.RIGHT, pady=(12, 0))
 
     def create_settings(self):
         """Create settings frame with time controls."""
         self.settings = tk.Frame(
             self.root,
             bg=self.get_t("settings_bg"),
-            relief=tk.RAISED,
+            relief=tk.RIDGE,
             bd=2
         )
-        self.settings.pack(pady=10, padx=20, fill=tk.X)
+        self.settings.pack(pady=10, padx=24, fill=tk.X)
 
         # Time label
         self.settings_time_label = tk.Label(
@@ -295,6 +311,24 @@ class UIBuilder:
         else:
             self.stats_btn.config(text="STATS")
 
+        modern_buttons = [
+            self.time_btn_1hr,
+            self.time_btn_2hr,
+            self.hours_minus_btn,
+            self.hours_plus_btn,
+            self.mins_minus_btn,
+            self.mins_plus_btn,
+            self.custom_btn,
+        ]
+        for btn in modern_buttons:
+            btn.config(
+                relief=tk.RAISED,
+                bd=1,
+                activebackground=self.get_t("button_inactive"),
+                activeforeground=self.get_t("text_light"),
+                padx=8
+            )
+
         # Widgets that control initial timer duration.
         self.time_selection_widgets = [
             self.time_btn_1hr,
@@ -314,20 +348,20 @@ class UIBuilder:
             self.root,
             bg=self.get_t("main_bg")
         )
-        self.clocks.pack(pady=25, expand=True, fill=tk.BOTH)
+        self.clocks.pack(pady=18, padx=24, expand=True, fill=tk.BOTH)
 
         # Player 1 (Productivity)
         self.p1_frame = tk.Frame(
             self.clocks,
             bg=self.get_t("frame_bg"),
-            relief=tk.RAISED,
-            bd=4
+            relief=tk.RIDGE,
+            bd=3
         )
         self.p1_frame.pack(side=tk.LEFT, padx=15, expand=True, fill=tk.BOTH)
 
         self.p1_name = tk.Entry(
             self.p1_frame,
-            font=('Arial', 16, 'bold'),
+            font=(self.font_family, 15, 'bold'),
             justify='center',
             bg=self.get_t("frame_bg"),
             fg=self.get_t("text_dark"),
@@ -339,7 +373,7 @@ class UIBuilder:
         self.p1_time = tk.Label(
             self.p1_frame,
             text="00:10:00",
-            font=('Arial', 56, 'bold'),
+            font=(self.font_family, 52, 'bold'),
             bg=self.get_t("frame_bg"),
             fg=self.get_t("text_dark")
         )
@@ -348,12 +382,15 @@ class UIBuilder:
         self.p1_btn = tk.Button(
             self.p1_frame,
             text="CLICK",
-            font=('Arial', 16, 'bold'),
+            font=(self.font_family, 15, 'bold'),
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light"),
-            activebackground=self.get_t("button_inactive"),
+            activebackground=self.get_t("button_active"),
+            activeforeground=self.get_t("text_light"),
             height=3,
             width=15,
+            relief=tk.RAISED,
+            bd=2,
             command=lambda: self.clock_app.button_click(1)
         )
         self.p1_btn.pack(pady=25)
@@ -362,14 +399,14 @@ class UIBuilder:
         self.p2_frame = tk.Frame(
             self.clocks,
             bg=self.get_t("frame_bg"),
-            relief=tk.RAISED,
-            bd=4
+            relief=tk.RIDGE,
+            bd=3
         )
         self.p2_frame.pack(side=tk.RIGHT, padx=15, expand=True, fill=tk.BOTH)
 
         self.p2_name = tk.Entry(
             self.p2_frame,
-            font=('Arial', 16, 'bold'),
+            font=(self.font_family, 15, 'bold'),
             justify='center',
             bg=self.get_t("frame_bg"),
             fg=self.get_t("text_dark"),
@@ -381,7 +418,7 @@ class UIBuilder:
         self.p2_time = tk.Label(
             self.p2_frame,
             text="00:00:00",
-            font=('Arial', 56, 'bold'),
+            font=(self.font_family, 52, 'bold'),
             bg=self.get_t("frame_bg"),
             fg=self.get_t("text_dark")
         )
@@ -390,12 +427,15 @@ class UIBuilder:
         self.p2_btn = tk.Button(
             self.p2_frame,
             text="CLICK",
-            font=('Arial', 16, 'bold'),
+            font=(self.font_family, 15, 'bold'),
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light"),
-            activebackground=self.get_t("button_inactive"),
+            activebackground=self.get_t("button_active"),
+            activeforeground=self.get_t("text_light"),
             height=3,
             width=15,
+            relief=tk.RAISED,
+            bd=2,
             command=lambda: self.clock_app.button_click(2)
         )
         self.p2_btn.pack(pady=25)
@@ -406,29 +446,37 @@ class UIBuilder:
             self.root,
             bg=self.get_t("main_bg")
         )
-        self.controls.pack(pady=15)
+        self.controls.pack(pady=(10, 14))
 
         self.pause_btn = tk.Button(
             self.controls,
             text="STOP",
-            font=('Arial', 13, 'bold'),
+            font=(self.font_family, 13, 'bold'),
             command=self.clock_app.toggle_pause,
             width=12,
             height=2,
             bg=self.get_t("button_stop"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_stop"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=2
         )
         self.pause_btn.pack(side=tk.LEFT, padx=8)
 
         self.reset_btn = tk.Button(
             self.controls,
             text="RESET",
-            font=('Arial', 13, 'bold'),
+            font=(self.font_family, 13, 'bold'),
             command=self.clock_app.reset,
             width=12,
             height=2,
             bg=self.get_t("button_reset"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_reset"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=2
         )
         self.reset_btn.pack(side=tk.LEFT, padx=8)
 
@@ -438,12 +486,12 @@ class UIBuilder:
             self.root,
             bg=self.get_t("main_bg")
         )
-        self.footer.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
+        self.footer.pack(side=tk.BOTTOM, fill=tk.X, padx=24, pady=10)
 
         self.company_label = tk.Label(
             self.footer,
             text=f"Powered by {self.developer_name}",
-            font=('Arial', 9),
+            font=(self.font_family, 9),
             bg=self.get_t("main_bg"),
             fg=self.get_t("text_muted")
         )
@@ -452,7 +500,7 @@ class UIBuilder:
         self.version_label = tk.Label(
             self.footer,
             text=f"v{self.version}",
-            font=('Arial', 9),
+            font=(self.font_family, 9),
             bg=self.get_t("main_bg"),
             fg=self.get_t("text_muted")
         )
@@ -464,9 +512,14 @@ class UIBuilder:
         self.root.configure(bg=self.get_t("main_bg"))
 
         # Title
+        self.title_row.config(bg=self.get_t("main_bg"))
         self.title_widget.config(
             bg=self.get_t("main_bg"),
             fg=self.get_t("title_text")
+        )
+        self.title_subtitle.config(
+            bg=self.get_t("main_bg"),
+            fg=self.get_t("text_muted")
         )
 
         # Settings frame
@@ -477,11 +530,19 @@ class UIBuilder:
         )
         self.time_btn_1hr.config(
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=1
         )
         self.time_btn_2hr.config(
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=1
         )
         self.custom_label.config(
             bg=self.get_t("settings_bg"),
@@ -489,7 +550,11 @@ class UIBuilder:
         )
         self.hours_minus_btn.config(
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=1
         )
         self.custom_hours_entry.config(
             bg=self.get_t("frame_bg"),
@@ -497,7 +562,11 @@ class UIBuilder:
         )
         self.hours_plus_btn.config(
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=1
         )
         self.hours_label.config(
             bg=self.get_t("settings_bg"),
@@ -505,7 +574,11 @@ class UIBuilder:
         )
         self.mins_minus_btn.config(
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=1
         )
         self.custom_mins_entry.config(
             bg=self.get_t("frame_bg"),
@@ -513,7 +586,11 @@ class UIBuilder:
         )
         self.mins_plus_btn.config(
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=1
         )
         self.mins_label.config(
             bg=self.get_t("settings_bg"),
@@ -521,7 +598,11 @@ class UIBuilder:
         )
         self.custom_btn.config(
             bg=self.get_t("button_inactive"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=1
         )
         self.theme_toggle_btn.config(
             text="",
@@ -553,7 +634,8 @@ class UIBuilder:
         self.p1_btn.config(
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light"),
-            activebackground=self.get_t("button_inactive")
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light")
         )
 
         # Player 2
@@ -569,18 +651,23 @@ class UIBuilder:
         self.p2_btn.config(
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light"),
-            activebackground=self.get_t("button_inactive")
+            activebackground=self.get_t("button_inactive"),
+            activeforeground=self.get_t("text_light")
         )
 
         # Controls
         self.controls.config(bg=self.get_t("main_bg"))
         self.pause_btn.config(
             bg=self.get_t("button_stop"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_stop"),
+            activeforeground=self.get_t("text_light")
         )
         self.reset_btn.config(
             bg=self.get_t("button_reset"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("button_reset"),
+            activeforeground=self.get_t("text_light")
         )
         self.stats_btn.config(
             bg=self.get_t("button_inactive"),

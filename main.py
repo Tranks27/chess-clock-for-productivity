@@ -26,7 +26,8 @@ class ChessClock:
     def __init__(self, root):
         self.root = root
         self.root.title("TrueFocus Timer")
-        self.root.geometry("900x700")
+        self.root.geometry("980x740")
+        self.root.minsize(920, 700)
 
         # Set window icon
         self._set_window_icon()

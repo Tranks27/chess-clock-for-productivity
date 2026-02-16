@@ -2,34 +2,34 @@
 
 THEMES = {
     "light": {
-        "main_bg": "#2c3e50",
-        "settings_bg": "#34495e",
-        "frame_bg": "#ecf0f1",
-        "button_inactive": "#3498db",
-        "button_active": "#2ecc71",
-        "button_stop": "#e74c3c",
-        "button_reset": "#95a5a6",
-        "warning_medium": "#f39c12",
-        "warning_critical": "#e74c3c",
-        "text_light": "white",
-        "text_dark": "black",
-        "text_muted": "#7f8c8d",
-        "title_text": "#5f6b78"
+        "main_bg": "#F5EBDD",
+        "settings_bg": "#1F3A5F",
+        "frame_bg": "#FFFDF8",
+        "button_inactive": "#0EA5A4",
+        "button_active": "#E85D04",
+        "button_stop": "#C1121F",
+        "button_reset": "#6B7280",
+        "warning_medium": "#D97706",
+        "warning_critical": "#B91C1C",
+        "text_light": "#F8F5EE",
+        "text_dark": "#1A2333",
+        "text_muted": "#6B7280",
+        "title_text": "#1F3A5F"
     },
     "dark": {
-        "main_bg": "#1a1a1a",
-        "settings_bg": "#252525",
-        "frame_bg": "#2d2d2d",
-        "button_inactive": "#1e88e5",
-        "button_active": "#4caf50",
-        "button_stop": "#d32f2f",
-        "button_reset": "#616161",
-        "warning_medium": "#ff6f00",
-        "warning_critical": "#d32f2f",
-        "text_light": "white",
-        "text_dark": "#e0e0e0",
-        "text_muted": "#9e9e9e",
-        "title_text": "#7a7a7a"
+        "main_bg": "#111827",
+        "settings_bg": "#0F2A3A",
+        "frame_bg": "#1F2937",
+        "button_inactive": "#06B6D4",
+        "button_active": "#F59E0B",
+        "button_stop": "#EF4444",
+        "button_reset": "#6B7280",
+        "warning_medium": "#FB923C",
+        "warning_critical": "#F87171",
+        "text_light": "#E5E7EB",
+        "text_dark": "#E5E7EB",
+        "text_muted": "#9CA3AF",
+        "title_text": "#67E8F9"
     }
 }
 
