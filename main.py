@@ -12,6 +12,7 @@ from src.ui import UIBuilder
 from src.timer import TimerState
 from src.stats import StatsTracker
 from src.idle_detector import IdleDetector
+from src.mini_window import MiniWindowManager
 import os
 
 __version__ = "1.3.0"
@@ -60,17 +61,35 @@ class ChessClock:
         self._idle_prompt_active = False
         self._idle_auto_switch_thread = None
         self._auto_switched_to_slack = False
+        self.mini_window_manager = MiniWindowManager(
+            root=self.root,
+            theme_manager=self.theme_manager,
+            timer_state=self.timer_state
+        )
 
-    def _set_window_icon(self):
+        # Show a sticky mini timer while the main window is minimized.
+        self.root.bind("<Unmap>", self.mini_window_manager.on_root_unmap)
+        self.root.bind("<Map>", self.mini_window_manager.on_root_map)
+
+    def _set_window_icon(self, window=None):
         """Set window icon from assets."""
+        if window is None:
+            window = self.root
         try:
-            script_dir = get_script_dir()
-            icon_path = os.path.join(script_dir, "assets", "media", "app_icon.ico")
-
-            if os.path.exists(icon_path):
-                self.root.iconbitmap(icon_path)
+            for icon_path in self._get_preferred_icon_paths():
+                if os.path.exists(icon_path):
+                    window.iconbitmap(icon_path)
+                    break
         except Exception as e:
             print(f"Icon loading error: {e}")
+
+    def _get_preferred_icon_paths(self):
+        """Return icon candidates in priority order."""
+        script_dir = get_script_dir()
+        media_dir = os.path.join(script_dir, "assets", "media")
+        return [
+            os.path.join(media_dir, "app_icon_circle.ico"),
+        ]
 
     def button_click(self, player):
         """Handle player button click."""
@@ -121,6 +140,7 @@ class ChessClock:
         # Update warning colors for player 1 only
         p1_warning = self.timer_state.get_warning_level()
         self.ui.set_frame_warning(self.ui.p1_frame, p1_warning)
+        self.mini_window_manager.update()
 
     def set_time(self, seconds):
         """Set player 1 time."""
@@ -186,6 +206,7 @@ class ChessClock:
         self.theme_manager.toggle_theme()
         save_config(self.theme_manager.current_theme)
         self.ui.apply_theme()
+        self.mini_window_manager.apply_theme()
         self._display_times()
 
     def stop_alarm(self):
@@ -292,8 +313,8 @@ class ChessClock:
                     messagebox.showinfo(
                         "Auto-Switched to Slack",
 
-                        "AFK detected!!!👀\nSwitched to Slack and started tracking.\n\n" \
-                        "Jump back to the Main timer when you’re ready."
+                        "AFK detected!!!ðŸ‘€\nSwitched to Slack and started tracking.\n\n" \
+                        "Jump back to the Main timer when youâ€™re ready."
                     )
                 self.root.after(0, close_and_switch)
 
@@ -311,6 +332,7 @@ class ChessClock:
     def _on_window_close(self):
         """Handle window close event."""
         self.idle_detector.stop()
+        self.mini_window_manager.destroy()
         self.root.destroy()
 
     def end_game(self):
@@ -367,3 +389,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
