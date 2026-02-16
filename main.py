@@ -14,10 +14,8 @@ from src.timer import TimerState
 from src.stats import StatsTracker
 from src.idle_detector import IdleDetector
 from src.mini_window import MiniWindowManager
+from src import __version__, __developer_name__
 import os
-
-__version__ = "1.3.0"
-__developer_name__ = "AYJ Systems"
 
 
 class ChessClock:

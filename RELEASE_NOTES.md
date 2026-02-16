@@ -1,37 +1,63 @@
-# Release Notes - v1.3.0
+# Release Notes - v1.4.0
 
 ## Highlights
-✨ **Idle Detection** - App now automatically catches AFK time after 5 minutes
-📊 **Smarter Stats** - Monthly file organization keeps everything clean
-📅 **Calendar View** - Browse and analyze your work history by date
-🎯 **Better UX** - Custom time input, improved dialogs, consistent styling
-
+- UI refresh
+- Mini-window clock switch controls
 ---
 
 ## What's New
 
-### 🎯 Idle Detection
+### UI Modernization
+- Minor visual changes
+
+### Mini Window Clock Switch
+- Added Focus/Slack mini window
+
+## Fixes
+- STOP/RESUME label sync
+
+## New Dependency
+- `cairosvg>=2.7.1`
+
+---
+
+**Version:** 1.4.0
+**Status:** Production Ready
+
+---
+
+## v1.3.0
+
+### Highlights
+- Idle Detection - App now automatically catches AFK time after 5 minutes
+- Smarter Stats - Monthly file organization keeps everything clean
+- Calendar View - Browse and analyze your work history by date
+- Better UX - Custom time input, improved dialogs, consistent styling
+
+### What's New
+
+#### Idle Detection
 - Detects 5 minutes of inactivity, prompts to switch to Slack
 - Auto-switches after 3 minutes with confirmation popup
 
-### 📊 Monthly Stats Organization
+#### Monthly Stats Organization
 - Stats split into YYYY-MM.json files for better organization
 
-### 📅 Interactive Calendar
+#### Interactive Calendar
 - Browse work history by date with month navigation
 
-### ⏰ Custom Time Input
+#### Custom Time Input
 - Hour and minute fields with +/- buttons
 
-### 🏗️ Code Refactoring
+#### Code Refactoring
 - Modular architecture with separate modules in `/src`
 
-## Fixes
+### Fixes
 - Audio path resolution for .exe builds
 - Calendar navigation stability
 - Stats dashboard styling consistency
 
-## New Dependency
+### New Dependency
 - `pynput>=1.8.1` (for mouse tracking)
 
 ---

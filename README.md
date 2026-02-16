@@ -73,9 +73,10 @@ Download the `.exe` file from the [Releases](https://github.com/Tranks27/chess-c
 
 
 ## Building Executable
-```bash
+```powershell
 pip install pyinstaller
-pyinstaller --onefile --windowed --name "TrueFocusTimer" --icon "assets/media/app_icon.ico" --add-data "assets:assets" --add-data "src:src" main.py
+$version = python -c "from src import __version__; print(__version__)"
+pyinstaller --onefile --windowed --name "TrueFocusTimer_v$version" --icon "assets/media/app_icon.ico" --add-data "assets;assets" --add-data "src;src" main.py
 ```
 ## Notes
 If your desired custom sound file doesn't work, use online wav converter tool to convert the sound file. https://www.freeconvert.com/wav-converter
