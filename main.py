@@ -100,6 +100,7 @@ class ChessClock:
         """Handle player button click."""
         previous_player = self.timer_state.active_player
         if self.timer_state.start_active_player(player):
+            self.ui.set_pause_button_state(True)
             self.ui.set_time_selection_enabled(False)
             self.ui.update_button_states(self.timer_state.active_player)
 
@@ -209,7 +210,7 @@ class ChessClock:
         self.timer_state.reset()
         self.ui.set_time_selection_enabled(True)
         self.ui.update_button_states(None)
-        self.ui.set_pause_button_state(False)
+        self.ui.set_pause_button_state(True)
         self._display_times()
 
     def toggle_theme(self):
