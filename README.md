@@ -1,4 +1,4 @@
-<img width="891" height="680" alt="image" src="https://github.com/user-attachments/assets/ad5c6d87-d2e9-4806-a879-cb44e079cb78" />
+<img width="895" height="724" alt="image" src="https://github.com/user-attachments/assets/1ea24cce-519a-41a0-b49c-ff6dca78db8f" />
 
 # Productivity Timer
 
