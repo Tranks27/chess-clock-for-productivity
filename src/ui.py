@@ -5,6 +5,12 @@ import os
 import tkinter as tk
 
 from src.audio import get_script_dir
+from src.config import (
+    PRESET_TIME_1H_SECONDS,
+    PRESET_TIME_2H_SECONDS,
+    CUSTOM_DEFAULT_HOURS,
+    CUSTOM_DEFAULT_MINUTES,
+)
 
 try:
     import cairosvg
@@ -114,7 +120,7 @@ class UIBuilder:
             self.settings,
             text="1 hour",
             width=8,
-            command=lambda: self.clock_app.set_time(3600),
+            command=lambda: self.clock_app.set_time(PRESET_TIME_1H_SECONDS),
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light")
         )
@@ -125,7 +131,7 @@ class UIBuilder:
             self.settings,
             text="2 hour",
             width=8,
-            command=lambda: self.clock_app.set_time(7200),
+            command=lambda: self.clock_app.set_time(PRESET_TIME_2H_SECONDS),
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light")
         )
@@ -162,7 +168,7 @@ class UIBuilder:
             fg=self.get_t("text_dark"),
             justify='center'
         )
-        self.custom_hours_entry.insert(0, "1")
+        self.custom_hours_entry.insert(0, str(CUSTOM_DEFAULT_HOURS))
         self.custom_hours_entry.pack(side=tk.LEFT, padx=2)
 
         # Hours plus button
@@ -208,7 +214,7 @@ class UIBuilder:
             fg=self.get_t("text_dark"),
             justify='center'
         )
-        self.custom_mins_entry.insert(0, "00")
+        self.custom_mins_entry.insert(0, f"{CUSTOM_DEFAULT_MINUTES:02d}")
         self.custom_mins_entry.pack(side=tk.LEFT, padx=2)
 
         # Minutes plus button
@@ -347,7 +353,7 @@ class UIBuilder:
 
         self.p1_btn = tk.Button(
             self.p1_frame,
-            text="CLICK",
+            text="START",
             font=('Arial', 16, 'bold'),
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light"),
@@ -389,7 +395,7 @@ class UIBuilder:
 
         self.p2_btn = tk.Button(
             self.p2_frame,
-            text="CLICK",
+            text="START",
             font=('Arial', 16, 'bold'),
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light"),
@@ -622,7 +628,7 @@ class UIBuilder:
                 bg=self.get_t("button_active")
             )
             self.p2_btn.config(
-                text="CLICK",
+                text="START",
                 bg=self.get_t("button_inactive")
             )
         elif active_player == 2:
@@ -631,16 +637,16 @@ class UIBuilder:
                 bg=self.get_t("button_active")
             )
             self.p1_btn.config(
-                text="CLICK",
+                text="START",
                 bg=self.get_t("button_inactive")
             )
         else:
             self.p1_btn.config(
-                text="CLICK",
+                text="START",
                 bg=self.get_t("button_inactive")
             )
             self.p2_btn.config(
-                text="CLICK",
+                text="START",
                 bg=self.get_t("button_inactive")
             )
 

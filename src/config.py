@@ -3,7 +3,28 @@
 import os
 import json
 
+# Core timer configuration (seconds unless noted otherwise).
 DEFAULT_RESET_TIME = 600  # Default reset time in seconds (10 minutes)
+PRESET_TIME_1H_SECONDS = 3600
+PRESET_TIME_2H_SECONDS = 7200
+CUSTOM_DEFAULT_HOURS = 1
+CUSTOM_DEFAULT_MINUTES = 0
+
+# Productivity warning thresholds.
+WARNING_CRITICAL_SECONDS = 60
+WARNING_MEDIUM_SECONDS = 180
+
+# Idle detection configuration.
+IDLE_TIMEOUT_SECONDS = 10          #300
+IDLE_PROMPT_TIMEOUT_SECONDS = 5     #180
+IDLE_CHECK_INTERVAL_SECONDS = 1
+IDLE_AUTO_SWITCH_CHECK_INTERVAL_SECONDS = 1
+
+# UI/update loop configuration.
+TIMER_TICK_INTERVAL_MS = 100
+WINDOW_CHROME_APPLY_DELAY_MS = 10
+MINI_WINDOW_SYNC_DELAY_MS = 100
+
 
 def get_config_path():
     """Get the config file path."""

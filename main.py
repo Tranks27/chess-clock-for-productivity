@@ -7,7 +7,13 @@ import time
 import ctypes
 
 from src.themes import ThemeManager
-from src.config import load_config, save_config
+from src.config import (
+    load_config,
+    save_config,
+    TIMER_TICK_INTERVAL_MS,
+    WINDOW_CHROME_APPLY_DELAY_MS,
+    IDLE_AUTO_SWITCH_CHECK_INTERVAL_SECONDS,
+)
 from src.audio import AlarmPlayer, get_script_dir
 from src.ui import UIBuilder
 from src.timer import TimerState
@@ -34,7 +40,7 @@ class ChessClock:
         self.timer_state = TimerState()
         self.alarm_player = AlarmPlayer()
         self.stats_tracker = StatsTracker()
-        self.idle_detector = IdleDetector(idle_timeout=300, prompt_timeout=180)
+        self.idle_detector = IdleDetector()
 
         # Load theme preference
         theme = load_config(self.theme_manager.themes)
@@ -51,7 +57,8 @@ class ChessClock:
         # Setup idle detector callbacks
         self.idle_detector.set_callbacks(
             idle_callback=self._on_idle_detected,
-            reset_callback=self._on_activity_detected
+            reset_callback=self._on_activity_detected,
+            is_enabled_callback=self._should_track_idle
         )
         self.idle_detector.start()
 
@@ -71,8 +78,8 @@ class ChessClock:
         # Show a sticky mini timer while the main window is minimized.
         self.root.bind("<Unmap>", self.mini_window_manager.on_root_unmap)
         self.root.bind("<Map>", self.mini_window_manager.on_root_map)
-        self.root.bind("<Map>", lambda _e: self.root.after(10, self._apply_window_chrome_theme), add="+")
-        self.root.after(10, self._apply_window_chrome_theme)
+        self.root.bind("<Map>", lambda _e: self.root.after(WINDOW_CHROME_APPLY_DELAY_MS, self._apply_window_chrome_theme), add="+")
+        self.root.after(WINDOW_CHROME_APPLY_DELAY_MS, self._apply_window_chrome_theme)
 
     def _set_window_icon(self, window=None):
         """Set window icon from assets."""
@@ -137,7 +144,7 @@ class ChessClock:
         # Display times
         self._display_times()
 
-        self.root.after(100, self.tick)
+        self.root.after(TIMER_TICK_INTERVAL_MS, self.tick)
 
     def _display_times(self):
         """Display formatted times and update warning colors."""
@@ -327,7 +334,11 @@ class ChessClock:
 
     def _on_idle_detected(self, timeout_seconds):
         """Handle idle detection - prompt user to switch to Slack."""
-        if self._idle_prompt_active or self.timer_state.active_player == 2:
+        if (
+            not self._should_track_idle()
+            or self._idle_prompt_active
+            or self.timer_state.active_player == 2
+        ):
             return  # Already on Slack or dialog already shown
 
         self._idle_prompt_active = True
@@ -337,6 +348,7 @@ class ChessClock:
         def show_idle_prompt():
             """Show the idle detection dialog in the main thread."""
             nonlocal idle_dialog
+            idle_duration_label = self._format_duration(self.idle_detector.idle_timeout)
 
             idle_dialog = tk.Toplevel(self.root)
             idle_dialog.title("Idle Detected")
@@ -353,7 +365,11 @@ class ChessClock:
             # Message label
             message = tk.Label(
                 idle_dialog,
-                text=f"No mouse movement for 5 minutes.\n\nSwitch to Slack timer?\n\n(Auto-switching in {timeout_seconds} seconds if no response)",
+                text=(
+                    f"No mouse movement for {idle_duration_label}.\n\n"
+                    f"Switch to Slack timer?\n\n"
+                    f"(Auto-switching in {timeout_seconds} seconds if no response)"
+                ),
                 wraplength=320,
                 justify=tk.CENTER
             )
@@ -395,10 +411,12 @@ class ChessClock:
         # Start auto-switch timer in background thread
         def auto_switch_after_timeout():
             """Auto-switch to Slack after timeout if user didn't respond."""
-            for _ in range(timeout_seconds):
+            waited_seconds = 0.0
+            while waited_seconds < timeout_seconds:
                 if not self._idle_prompt_active:
                     return  # User already responded
-                time.sleep(1)
+                time.sleep(IDLE_AUTO_SWITCH_CHECK_INTERVAL_SECONDS)
+                waited_seconds += IDLE_AUTO_SWITCH_CHECK_INTERVAL_SECONDS
 
             # Auto-switch to Slack - close dialog and switch
             if self._idle_prompt_active:
@@ -420,9 +438,8 @@ class ChessClock:
                     # Show confirmation popup
                     messagebox.showinfo(
                         "Auto-Switched to Slack",
-
-                        "AFK detected!!!ðŸ‘€\nSwitched to Slack and started tracking.\n\n" \
-                        "Jump back to the Main timer when youâ€™re ready."
+                        "AFK detected!!!\nSwitched to Slack and started tracking.\n\n"
+                        "Jump back to the Main timer when you're ready."
                     )
                 self.root.after(0, close_and_switch)
 
@@ -436,6 +453,20 @@ class ChessClock:
         """Handle activity detection - user moved mouse after being idle."""
         if self._idle_prompt_active:
             self._idle_prompt_active = False
+
+    def _should_track_idle(self):
+        """Return True only while productivity timer is actively running."""
+        return self.timer_state.running and self.timer_state.active_player == 1
+
+    def _format_duration(self, total_seconds):
+        """Format seconds into a compact label for user-facing messages."""
+        seconds = int(total_seconds)
+        if seconds % 60 == 0:
+            minutes = seconds // 60
+            unit = "minute" if minutes == 1 else "minutes"
+            return f"{minutes} {unit}"
+        unit = "second" if seconds == 1 else "seconds"
+        return f"{seconds} {unit}"
 
     def _on_window_close(self):
         """Handle window close event."""

@@ -5,6 +5,7 @@ import os
 import tkinter as tk
 
 from src.audio import get_script_dir
+from src.config import MINI_WINDOW_SYNC_DELAY_MS
 
 try:
     from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageTk
@@ -51,13 +52,13 @@ class MiniWindowManager:
         """Handle root minimize/hide."""
         if event.widget is not self.root:
             return
-        self.root.after(100, self.sync_with_root_state)
+        self.root.after(MINI_WINDOW_SYNC_DELAY_MS, self.sync_with_root_state)
 
     def on_root_map(self, event):
         """Handle root restore/show."""
         if event.widget is not self.root:
             return
-        self.root.after(100, self.sync_with_root_state)
+        self.root.after(MINI_WINDOW_SYNC_DELAY_MS, self.sync_with_root_state)
 
     def sync_with_root_state(self):
         """Show mini timer when minimized, hide when restored."""

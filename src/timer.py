@@ -1,7 +1,11 @@
 """Timer logic and state management for TrueFocus Timer."""
 
 import time
-from src.config import DEFAULT_RESET_TIME
+from src.config import (
+    DEFAULT_RESET_TIME,
+    WARNING_CRITICAL_SECONDS,
+    WARNING_MEDIUM_SECONDS,
+)
 
 
 class TimerState:
@@ -89,8 +93,8 @@ class TimerState:
         Returns:
             str or None: warning level - None (normal), 'medium', 'critical'
         """
-        if self.player1_time < 60:
+        if self.player1_time < WARNING_CRITICAL_SECONDS:
             return "critical"
-        elif self.player1_time < 180:
+        elif self.player1_time < WARNING_MEDIUM_SECONDS:
             return "medium"
         return None
