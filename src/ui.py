@@ -714,7 +714,7 @@ class UIBuilder:
 
     def show_stats_window(self):
         """Show stats visualization window."""
-        from datetime import datetime, timedelta
+        from datetime import datetime
         import calendar
 
         win = tk.Toplevel(self.root)
@@ -1247,7 +1247,7 @@ class UIBuilder:
     def _render_calendar(self, parent, sessions, state=None, on_day_select=None, on_month_change=None):
         """Render activity calendar showing days with sessions."""
         import calendar
-        from datetime import datetime, timedelta
+        from datetime import datetime
 
         if state is None:
             state = {"current_month": datetime.now().month, "current_year": datetime.now().year}

@@ -1,9 +1,6 @@
 """Entry point for TrueFocus Timer application."""
 
 import tkinter as tk
-from tkinter import messagebox
-import threading
-import time
 import ctypes
 
 from src.themes import ThemeManager
@@ -12,7 +9,6 @@ from src.config import (
     save_config,
     TIMER_TICK_INTERVAL_MS,
     WINDOW_CHROME_APPLY_DELAY_MS,
-    IDLE_AUTO_SWITCH_CHECK_INTERVAL_SECONDS,
 )
 from src.audio import AlarmPlayer, get_script_dir
 from src.ui import UIBuilder
@@ -20,6 +16,7 @@ from src.timer import TimerState
 from src.stats import StatsTracker
 from src.idle_detector import IdleDetector
 from src.mini_window import MiniWindowManager
+from src.debug_log import get_debug_logger, get_debug_log_path
 from src import __version__, __developer_name__
 import os
 
@@ -41,6 +38,7 @@ class ChessClock:
         self.alarm_player = AlarmPlayer()
         self.stats_tracker = StatsTracker()
         self.idle_detector = IdleDetector()
+        self.logger = get_debug_logger("truefocus.app")
 
         # Load theme preference
         theme = load_config(self.theme_manager.themes)
@@ -66,8 +64,8 @@ class ChessClock:
         self.root.protocol("WM_DELETE_WINDOW", self._on_window_close)
 
         self._idle_prompt_active = False
-        self._idle_auto_switch_thread = None
-        self._auto_switched_to_slack = False
+        self._idle_dialog = None
+        self._idle_auto_switch_after_id = None
         self.mini_window_manager = MiniWindowManager(
             root=self.root,
             theme_manager=self.theme_manager,
@@ -80,6 +78,7 @@ class ChessClock:
         self.root.bind("<Map>", self.mini_window_manager.on_root_map)
         self.root.bind("<Map>", lambda _e: self.root.after(WINDOW_CHROME_APPLY_DELAY_MS, self._apply_window_chrome_theme), add="+")
         self.root.after(WINDOW_CHROME_APPLY_DELAY_MS, self._apply_window_chrome_theme)
+        self.logger.info("app-started version=%s log=%s", __version__, get_debug_log_path())
 
     def _set_window_icon(self, window=None):
         """Set window icon from assets."""
@@ -105,6 +104,14 @@ class ChessClock:
         """Handle player button click."""
         previous_player = self.timer_state.active_player
         if self.timer_state.start_active_player(player):
+            self.logger.info(
+                "button-click player=%s previous=%s running=%s p1=%.2f p2=%.2f",
+                player,
+                previous_player,
+                self.timer_state.running,
+                self.timer_state.player1_time,
+                self.timer_state.player2_time,
+            )
             self.ui.set_pause_button_state(True)
             self.ui.set_time_selection_enabled(False)
             self.ui.update_button_states(self.timer_state.active_player)
@@ -333,126 +340,130 @@ class ChessClock:
         self.ui.show_stats_window()
 
     def _on_idle_detected(self, timeout_seconds):
-        """Handle idle detection - prompt user to switch to Slack."""
+        """Schedule idle prompt handling on the Tk main loop."""
+        self.logger.info(
+            "idle-detected-callback timeout=%ss active_player=%s running=%s prompt_active=%s",
+            timeout_seconds,
+            self.timer_state.active_player,
+            self.timer_state.running,
+            self._idle_prompt_active,
+        )
+        try:
+            self.root.after(0, lambda: self._show_idle_prompt(timeout_seconds))
+        except tk.TclError:
+            self.logger.exception("idle-callback-schedule-failed")
+            pass
+
+    def _show_idle_prompt(self, timeout_seconds):
+        """Show idle prompt and schedule auto-switch fully on Tk main thread."""
         if (
             not self._should_track_idle()
             or self._idle_prompt_active
             or self.timer_state.active_player == 2
         ):
-            return  # Already on Slack or dialog already shown
+            self.logger.info(
+                "idle-prompt-skip should_track=%s prompt_active=%s active_player=%s",
+                self._should_track_idle(),
+                self._idle_prompt_active,
+                self.timer_state.active_player,
+            )
+            return
 
         self._idle_prompt_active = True
-        self._auto_switched_to_slack = False
-        idle_dialog = None
+        self._cancel_idle_auto_switch()
+        self.logger.info("idle-prompt-shown timeout=%ss", timeout_seconds)
 
-        def show_idle_prompt():
-            """Show the idle detection dialog in the main thread."""
-            nonlocal idle_dialog
-            idle_duration_label = self._format_duration(self.idle_detector.idle_timeout)
+        idle_duration_label = self._format_duration(self.idle_detector.idle_timeout)
+        self._idle_dialog = tk.Toplevel(self.root)
+        self._idle_dialog.title("Idle Detected")
+        self._idle_dialog.geometry("350x170")
+        self._idle_dialog.transient(self.root)
+        self._idle_dialog.protocol("WM_DELETE_WINDOW", self._dismiss_idle_prompt)
 
-            idle_dialog = tk.Toplevel(self.root)
-            idle_dialog.title("Idle Detected")
-            idle_dialog.geometry("350x170")
-            idle_dialog.transient(self.root)
-            idle_dialog.grab_set()
+        self._idle_dialog.update_idletasks()
+        x = self.root.winfo_x() + (self.root.winfo_width() // 2) - (self._idle_dialog.winfo_width() // 2)
+        y = self.root.winfo_y() + (self.root.winfo_height() // 2) - (self._idle_dialog.winfo_height() // 2)
+        self._idle_dialog.geometry(f"+{x}+{y}")
 
-            # Center the dialog
-            idle_dialog.update_idletasks()
-            x = self.root.winfo_x() + (self.root.winfo_width() // 2) - (idle_dialog.winfo_width() // 2)
-            y = self.root.winfo_y() + (self.root.winfo_height() // 2) - (idle_dialog.winfo_height() // 2)
-            idle_dialog.geometry(f"+{x}+{y}")
-
-            # Message label
-            message = tk.Label(
-                idle_dialog,
-                text=(
-                    f"No mouse movement for {idle_duration_label}.\n\n"
-                    f"Switch to Slack timer?\n\n"
-                    f"(Auto-switching in {timeout_seconds} seconds if no response)"
-                ),
-                wraplength=320,
-                justify=tk.CENTER
-            )
-            message.pack(pady=15)
-
-            # Buttons frame
-            button_frame = tk.Frame(idle_dialog)
-            button_frame.pack(pady=10)
-
-            def on_yes():
-                """User clicked Yes."""
-                nonlocal idle_dialog
-                self._idle_prompt_active = False
-                if idle_dialog:
-                    try:
-                        idle_dialog.destroy()
-                    except:
-                        pass
-                self.button_click(2)  # Switch to Slack timer
-
-            def on_no():
-                """User clicked No - wait for auto-switch timeout."""
-                nonlocal idle_dialog
-                if idle_dialog:
-                    try:
-                        idle_dialog.destroy()
-                    except:
-                        pass
-
-            yes_btn = tk.Button(button_frame, text="Yes", command=on_yes, width=8)
-            yes_btn.pack(side=tk.LEFT, padx=5)
-
-            no_btn = tk.Button(button_frame, text="No", command=on_no, width=8)
-            no_btn.pack(side=tk.LEFT, padx=5)
-
-        # Show dialog in main thread
-        self.root.after(0, show_idle_prompt)
-
-        # Start auto-switch timer in background thread
-        def auto_switch_after_timeout():
-            """Auto-switch to Slack after timeout if user didn't respond."""
-            waited_seconds = 0.0
-            while waited_seconds < timeout_seconds:
-                if not self._idle_prompt_active:
-                    return  # User already responded
-                time.sleep(IDLE_AUTO_SWITCH_CHECK_INTERVAL_SECONDS)
-                waited_seconds += IDLE_AUTO_SWITCH_CHECK_INTERVAL_SECONDS
-
-            # Auto-switch to Slack - close dialog and switch
-            if self._idle_prompt_active:
-                self._idle_prompt_active = False
-                self._auto_switched_to_slack = True
-
-                # Close the idle dialog if it exists
-                def close_and_switch():
-                    nonlocal idle_dialog
-                    if idle_dialog:
-                        try:
-                            idle_dialog.destroy()
-                        except:
-                            pass
-
-                    # Switch to Slack timer
-                    self.button_click(2)
-
-                    # Show confirmation popup
-                    messagebox.showinfo(
-                        "Auto-Switched to Slack",
-                        "AFK detected!!!\nSwitched to Slack and started tracking.\n\n"
-                        "Jump back to the Main timer when you're ready."
-                    )
-                self.root.after(0, close_and_switch)
-
-        self._idle_auto_switch_thread = threading.Thread(
-            target=auto_switch_after_timeout,
-            daemon=True
+        message = tk.Label(
+            self._idle_dialog,
+            text=(
+                f"No mouse movement for {idle_duration_label}.\n\n"
+                f"Switch to Slack timer?\n\n"
+                f"(Auto-switching in {timeout_seconds} seconds if no response)"
+            ),
+            wraplength=320,
+            justify=tk.CENTER
         )
-        self._idle_auto_switch_thread.start()
+        message.pack(pady=15)
+
+        button_frame = tk.Frame(self._idle_dialog)
+        button_frame.pack(pady=10)
+
+        yes_btn = tk.Button(button_frame, text="Yes", command=self._confirm_idle_switch, width=8)
+        yes_btn.pack(side=tk.LEFT, padx=5)
+
+        no_btn = tk.Button(button_frame, text="No", command=self._dismiss_idle_prompt, width=8)
+        no_btn.pack(side=tk.LEFT, padx=5)
+
+        self._idle_auto_switch_after_id = self.root.after(
+            int(timeout_seconds * 1000),
+            self._auto_switch_to_slack
+        )
+
+    def _cancel_idle_auto_switch(self):
+        """Cancel pending idle auto-switch callback if it exists."""
+        if self._idle_auto_switch_after_id is None:
+            return
+        try:
+            self.root.after_cancel(self._idle_auto_switch_after_id)
+        except tk.TclError:
+            pass
+        self._idle_auto_switch_after_id = None
+
+    def _close_idle_dialog(self):
+        """Close idle dialog safely if currently open."""
+        if self._idle_dialog is not None:
+            try:
+                self._idle_dialog.destroy()
+            except tk.TclError:
+                pass
+        self._idle_dialog = None
+
+    def _dismiss_idle_prompt(self):
+        """Dismiss idle prompt and cancel any pending auto-switch."""
+        self.logger.info("idle-prompt-dismissed")
+        self._idle_prompt_active = False
+        self._cancel_idle_auto_switch()
+        self._close_idle_dialog()
+
+    def _confirm_idle_switch(self):
+        """User confirmed switching to Slack timer."""
+        self.logger.info("idle-switch-confirmed-by-user")
+        self._dismiss_idle_prompt()
+        self.button_click(2)
+
+    def _auto_switch_to_slack(self):
+        """Auto-switch to Slack when idle prompt timeout expires."""
+        self._idle_auto_switch_after_id = None
+        if not self._idle_prompt_active:
+            self.logger.info("idle-auto-switch-cancelled-before-fire")
+            return
+        self._idle_prompt_active = False
+        self.logger.info("idle-auto-switched-to-slack")
+        self._close_idle_dialog()
+        self.button_click(2)
+        # Non-modal notification avoids blocking the Tk event loop.
+        self.root.bell()
 
     def _on_activity_detected(self):
         """Handle activity detection - user moved mouse after being idle."""
-        if self._idle_prompt_active:
-            self._idle_prompt_active = False
+        self.logger.info("activity-detected")
+        try:
+            self.root.after(0, self._dismiss_idle_prompt)
+        except tk.TclError:
+            self.logger.exception("activity-dismiss-schedule-failed")
+            pass
 
     def _should_track_idle(self):
         """Return True only while productivity timer is actively running."""
@@ -470,6 +481,8 @@ class ChessClock:
 
     def _on_window_close(self):
         """Handle window close event."""
+        self.logger.info("window-close")
+        self._dismiss_idle_prompt()
         self.idle_detector.stop()
         self.mini_window_manager.destroy()
         self.root.destroy()

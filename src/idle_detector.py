@@ -3,6 +3,7 @@
 import threading
 import time
 from pynput import mouse
+from src.debug_log import get_debug_logger
 from src.config import (
     IDLE_TIMEOUT_SECONDS,
     IDLE_PROMPT_TIMEOUT_SECONDS,
@@ -27,7 +28,7 @@ class IdleDetector:
         self.last_mouse_position = None
         self.last_movement_time = time.time()
         self.is_running = False
-        self.detector_thread = None
+        self.listener = None
         self.idle_callback = None  # Called when idle detected
         self.reset_callback = None  # Called when activity detected
         self.is_enabled_callback = None  # Called to decide if idle checks should run
@@ -35,6 +36,7 @@ class IdleDetector:
         self._lock = threading.Lock()
         self._idle_detected = False
         self._idle_dialog_shown = False
+        self.logger = get_debug_logger("truefocus.idle")
 
     def set_callbacks(self, idle_callback=None, reset_callback=None, is_enabled_callback=None):
         """Set callbacks for idle detection and reset events."""
@@ -52,22 +54,34 @@ class IdleDetector:
         self._idle_dialog_shown = False
 
         # Start mouse listener
-        listener = mouse.Listener(on_move=self._on_mouse_move)
-        listener.start()
+        self.listener = mouse.Listener(on_move=self._on_mouse_move)
+        self.listener.start()
+        self.logger.info(
+            "idle-detector-started idle_timeout=%s prompt_timeout=%s",
+            self.idle_timeout,
+            self.prompt_timeout,
+        )
 
         # Start idle detection thread
-        self.detector_thread = threading.Thread(target=self._detect_idle, daemon=True)
-        self.detector_thread.start()
+        threading.Thread(target=self._detect_idle, daemon=True).start()
 
     def stop(self):
         """Stop monitoring for idle activity."""
         self.is_running = False
+        if self.listener is not None:
+            try:
+                self.listener.stop()
+            except Exception:
+                pass
+            self.listener = None
+        self.logger.info("idle-detector-stopped")
 
     def _on_mouse_move(self, x, y):
         """Called when mouse moves."""
         if not self.is_running:
             return
 
+        should_call_reset = False
         with self._lock:
             current_pos = (x, y)
 
@@ -80,8 +94,16 @@ class IdleDetector:
                 if self._idle_detected:
                     self._idle_detected = False
                     self._idle_dialog_shown = False
-                    if self.reset_callback:
-                        self.reset_callback()
+                    should_call_reset = True
+
+        # Callbacks run outside lock to avoid lock contention/deadlock risk.
+        if should_call_reset and self.reset_callback:
+            try:
+                self.logger.info("idle-reset-callback-triggered")
+                self.reset_callback()
+            except Exception:
+                self.logger.exception("idle-reset-callback-error")
+                pass
 
     def _detect_idle(self):
         """Monitor for idle periods."""
@@ -105,8 +127,13 @@ class IdleDetector:
                         self._idle_detected = True
                         self._idle_dialog_shown = True
                         should_trigger_idle = True
+                        self.logger.info("idle-detected elapsed=%.2fs", elapsed)
             if should_trigger_idle and self.idle_callback:
-                self.idle_callback(self.prompt_timeout)
+                try:
+                    self.idle_callback(self.prompt_timeout)
+                except Exception:
+                    self.logger.exception("idle-callback-error")
+                    pass
 
     def reset(self):
         """Manually reset idle timer."""
