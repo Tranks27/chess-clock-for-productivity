@@ -327,7 +327,10 @@ class UIBuilder:
             self.clocks,
             bg=self.get_t("frame_bg"),
             relief=tk.RAISED,
-            bd=4
+            bd=4,
+            highlightthickness=3,
+            highlightbackground=self.get_t("button_active"),
+            highlightcolor=self.get_t("button_active")
         )
         self.p1_frame.pack(side=tk.LEFT, padx=15, expand=True, fill=tk.BOTH)
 
@@ -357,9 +360,12 @@ class UIBuilder:
             font=('Arial', 16, 'bold'),
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light"),
-            activebackground=self.get_t("button_inactive"),
+            activebackground=self.get_t("button_active"),
+            activeforeground=self.get_t("text_light"),
             height=3,
             width=15,
+            relief=tk.RAISED,
+            bd=2,
             command=lambda: self.clock_app.button_click(1)
         )
         self.p1_btn.pack(pady=25)
@@ -369,7 +375,10 @@ class UIBuilder:
             self.clocks,
             bg=self.get_t("frame_bg"),
             relief=tk.RAISED,
-            bd=4
+            bd=4,
+            highlightthickness=3,
+            highlightbackground=self.get_t("accent_secondary"),
+            highlightcolor=self.get_t("accent_secondary")
         )
         self.p2_frame.pack(side=tk.RIGHT, padx=15, expand=True, fill=tk.BOTH)
 
@@ -399,9 +408,12 @@ class UIBuilder:
             font=('Arial', 16, 'bold'),
             bg=self.get_t("button_inactive"),
             fg=self.get_t("text_light"),
-            activebackground=self.get_t("button_inactive"),
+            activebackground=self.get_t("button_active"),
+            activeforeground=self.get_t("text_light"),
             height=3,
             width=15,
+            relief=tk.RAISED,
+            bd=2,
             command=lambda: self.clock_app.button_click(2)
         )
         self.p2_btn.pack(pady=25)
@@ -422,7 +434,11 @@ class UIBuilder:
             width=12,
             height=2,
             bg=self.get_t("button_stop"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("warning_critical"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=2
         )
         self.pause_btn.pack(side=tk.LEFT, padx=8)
 
@@ -434,7 +450,11 @@ class UIBuilder:
             width=12,
             height=2,
             bg=self.get_t("button_reset"),
-            fg=self.get_t("text_light")
+            fg=self.get_t("text_light"),
+            activebackground=self.get_t("accent_primary"),
+            activeforeground=self.get_t("text_light"),
+            relief=tk.RAISED,
+            bd=2
         )
         self.reset_btn.pack(side=tk.LEFT, padx=8)
 

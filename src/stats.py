@@ -3,6 +3,9 @@
 import os
 import json
 from datetime import datetime
+from src.debug_log import get_debug_logger
+
+_logger = get_debug_logger("truefocus.stats")
 
 
 def get_stats_dir():
@@ -48,10 +51,10 @@ def load_stats():
                             data = json.load(f)
                             if isinstance(data, dict) and "sessions" in data:
                                 all_sessions.extend(data["sessions"])
-                    except Exception as e:
-                        print(f"Error loading {filename}: {e}")
-    except Exception as e:
-        print(f"Error loading stats: {e}")
+                    except Exception:
+                        _logger.exception("stats-file-load-error file=%s", filename)
+    except Exception:
+        _logger.exception("stats-load-error")
 
     return {"sessions": all_sessions}
 
@@ -70,8 +73,8 @@ def save_stats(stats, year=None, month=None):
         stats_path = get_stats_path_for_month(year, month)
         with open(stats_path, 'w') as f:
             json.dump(stats, f, indent=2)
-    except Exception as e:
-        print(f"Error saving stats: {e}")
+    except Exception:
+        _logger.exception("stats-save-error year=%s month=%s", year, month)
 
 
 class StatsTracker:
@@ -141,8 +144,8 @@ class StatsTracker:
             try:
                 with open(month_stats_path, 'r') as f:
                     month_stats = json.load(f)
-            except Exception as e:
-                print(f"Error loading month stats: {e}")
+            except Exception:
+                _logger.exception("month-stats-load-error path=%s", month_stats_path)
 
         # Add current session to month file
         month_stats["sessions"].append(self.current_session)

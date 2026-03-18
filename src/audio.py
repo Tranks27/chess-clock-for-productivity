@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 import winsound
+from src.debug_log import get_debug_logger
 
 
 def get_script_dir():
@@ -23,6 +24,7 @@ class AlarmPlayer:
     def __init__(self):
         self.alarm_playing = False
         self.alarm_thread = None
+        self.logger = get_debug_logger("truefocus.audio")
 
     def play_alarm_loop(self, alarm_path):
         """Play alarm sound in a loop until stopped."""
@@ -38,8 +40,8 @@ class AlarmPlayer:
                         break
                     time.sleep(0.1)
 
-            except Exception as e:
-                print(f"Error playing alarm: {e}")
+            except Exception:
+                self.logger.exception("alarm-playback-error")
                 break
 
     def start_alarm(self, alarm_path):

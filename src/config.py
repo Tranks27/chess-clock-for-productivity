@@ -43,8 +43,10 @@ def load_config(available_themes):
                 theme = config.get("theme", "dark")
                 if theme in available_themes:
                     return theme
-    except Exception as e:
-        print(f"Error loading config: {e}")
+    except Exception:
+        # Log with lazy import to avoid circular dependency during early startup
+        from src.debug_log import get_debug_logger
+        get_debug_logger("truefocus.config").exception("config-load-error")
     return "dark"
 
 
@@ -55,5 +57,7 @@ def save_config(theme):
         config = {"theme": theme}
         with open(config_path, 'w') as f:
             json.dump(config, f)
-    except Exception as e:
-        print(f"Error saving config: {e}")
+    except Exception:
+        # Log with lazy import to avoid circular dependency
+        from src.debug_log import get_debug_logger
+        get_debug_logger("truefocus.config").exception("config-save-error")

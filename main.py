@@ -89,8 +89,8 @@ class ChessClock:
                 if os.path.exists(icon_path):
                     window.iconbitmap(icon_path)
                     break
-        except Exception as e:
-            print(f"Icon loading error: {e}")
+        except Exception:
+            self.logger.warning("icon-loading-failed")
 
     def _get_preferred_icon_paths(self):
         """Return icon candidates in priority order."""
@@ -379,6 +379,7 @@ class ChessClock:
         self._idle_dialog.geometry("350x170")
         self._idle_dialog.transient(self.root)
         self._idle_dialog.protocol("WM_DELETE_WINDOW", self._dismiss_idle_prompt)
+        self._idle_dialog.configure(bg=self.theme_manager.get_color("main_bg"))
 
         self._idle_dialog.update_idletasks()
         x = self.root.winfo_x() + (self.root.winfo_width() // 2) - (self._idle_dialog.winfo_width() // 2)
@@ -393,17 +394,33 @@ class ChessClock:
                 f"(Auto-switching in {timeout_seconds} seconds if no response)"
             ),
             wraplength=320,
-            justify=tk.CENTER
+            justify=tk.CENTER,
+            bg=self.theme_manager.get_color("main_bg"),
+            fg=self.theme_manager.get_color("text_dark")
         )
         message.pack(pady=15)
 
-        button_frame = tk.Frame(self._idle_dialog)
+        button_frame = tk.Frame(self._idle_dialog, bg=self.theme_manager.get_color("main_bg"))
         button_frame.pack(pady=10)
 
-        yes_btn = tk.Button(button_frame, text="Yes", command=self._confirm_idle_switch, width=8)
+        yes_btn = tk.Button(
+            button_frame,
+            text="Yes",
+            command=self._confirm_idle_switch,
+            width=8,
+            bg=self.theme_manager.get_color("button_active"),
+            fg=self.theme_manager.get_color("text_light")
+        )
         yes_btn.pack(side=tk.LEFT, padx=5)
 
-        no_btn = tk.Button(button_frame, text="No", command=self._dismiss_idle_prompt, width=8)
+        no_btn = tk.Button(
+            button_frame,
+            text="No",
+            command=self._dismiss_idle_prompt,
+            width=8,
+            bg=self.theme_manager.get_color("button_reset"),
+            fg=self.theme_manager.get_color("text_light")
+        )
         no_btn.pack(side=tk.LEFT, padx=5)
 
         self._idle_auto_switch_after_id = self.root.after(
@@ -508,24 +525,23 @@ class ChessClock:
         alarm_path = self.alarm_player.get_alarm_path()
 
         try:
-            print(f"Looking for alarm at: {alarm_path}")
-            print(f"File exists: {os.path.exists(alarm_path)}")
+            self.logger.debug("alarm-lookup path=%s exists=%s", alarm_path, os.path.exists(alarm_path))
 
             if os.path.exists(alarm_path):
                 file_size = os.path.getsize(alarm_path)
-                print(f"File size: {file_size} bytes")
+                self.logger.debug("alarm-file-size bytes=%d", file_size)
 
                 if file_size > 0:
                     self.alarm_player.start_alarm(alarm_path)
-                    print("Alarm started in loop")
+                    self.logger.info("alarm-started")
                 else:
-                    print("WAV file is empty")
+                    self.logger.warning("alarm-file-empty")
                     self.alarm_player.play_error_sound()
             else:
-                print("Alarm file not found")
+                self.logger.warning("alarm-file-not-found path=%s", alarm_path)
                 self.alarm_player.play_error_sound()
         except Exception as e:
-            print(f"Sound error: {e}")
+            self.logger.exception("alarm-start-error")
             self.alarm_player.play_error_sound()
 
         # Show game over popup
